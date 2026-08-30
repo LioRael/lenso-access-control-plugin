@@ -10,7 +10,7 @@ members = [
 [workspace.package]
 edition = "2024"
 license = "MIT"
-publish = false
+publish = true
 repository = "https://github.com/LioRael/lenso-access-control-plugin"
 rust-version = "1.94"
 
