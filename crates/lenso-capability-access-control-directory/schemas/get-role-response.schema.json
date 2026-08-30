@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["name", "permissions", "policy_revision", "protected", "role_id"],
+  "properties": {
+    "name": {"type": "string"},
+    "permissions": {"type": "array", "items": {"type": "string"}},
+    "policy_revision": {"type": "string", "pattern": "^(0|[1-9][0-9]*)$"},
+    "protected": {"type": "boolean"},
+    "role_id": {"type": "string"}
+  },
+  "additionalProperties": false
+}

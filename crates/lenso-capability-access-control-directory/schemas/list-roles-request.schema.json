@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["cursor", "limit", "scope"],
+  "properties": {
+    "cursor": {"$ref": "#/$defs/NullableString"},
+    "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+    "scope": {"$ref": "#/$defs/Scope"}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "NullableString": {"type": ["string", "null"]},
+    "Scope": {
+      "type": "object",
+      "required": ["id", "kind"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1, "maxLength": 512},
+        "kind": {"type": "string", "minLength": 1, "maxLength": 128}
+      },
+      "additionalProperties": false
+    }
+  }
+}

@@ -14,6 +14,9 @@ scope-owner facts.
 - Provides `lenso.access-control-admin@1` with `bootstrap_scope`,
   `create_role`, `set_role_permissions`, `delete_role`, `assign_role`, and
   `revoke_role`.
+- Provides `lenso.access-control-directory@1` with `get_role`, `list_roles`,
+  and `list_subject_roles` for exact configured peer Plugin callers. Results
+  include the current policy revision and sorted permission snapshots.
 - Requires exactly one `lenso.secrets@1` Provider for the PostgreSQL URL.
 
 The access check is portable and default-deny. Administration is transport
@@ -24,7 +27,8 @@ plus current scoped RBAC state.
 ## State and lifecycle
 
 Configuration supplies an owned schema, a database URL secret reference, Auth
-issuer/public verification key, and exact bootstrap caller Instance keys.
+issuer/public verification key, exact bootstrap caller Instance keys, and a
+separate allowlist for read-only Directory consumers.
 Activation resolves the secret and verifies an already-installed schema.
 Deactivation closes the pool. Setup and upgrade remain explicit operator work.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-expected_crates=$'lenso-access-control-postgres-plugin\nlenso-capability-access-control\nlenso-capability-access-control-admin'
+expected_crates=$'lenso-access-control-postgres-plugin\nlenso-capability-access-control\nlenso-capability-access-control-admin\nlenso-capability-access-control-directory'
 actual_crates="$(find crates -mindepth 2 -maxdepth 2 -name Cargo.toml -print0 | xargs -0 sed -n 's/^name = "\([^"]*\)"/\1/p' | sort)"
 
 if [[ "$actual_crates" != "$expected_crates" ]]; then

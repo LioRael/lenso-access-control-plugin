@@ -42,6 +42,18 @@
         "maxLength": 256,
         "pattern": "^[A-Za-z0-9._:-]+$"
       }
+    },
+    "directory_callers": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "default": [],
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256,
+        "pattern": "^[A-Za-z0-9._:-]+$"
+      }
     }
   }
 }

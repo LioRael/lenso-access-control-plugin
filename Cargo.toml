@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/lenso-capability-access-control",
     "crates/lenso-capability-access-control-admin",
+    "crates/lenso-capability-access-control-directory",
     "crates/lenso-access-control-postgres-plugin",
 ]
 

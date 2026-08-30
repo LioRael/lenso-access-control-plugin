@@ -1,0 +1,29 @@
+{
+  "id": "lenso.access-control-directory@1",
+  "version": "1.0.0",
+  "portable": true,
+  "cross_lane_transfer": true,
+  "operations": [
+    {
+      "name": "get_role",
+      "interaction": "request",
+      "request_schema": "schemas/get-role-request.schema.json",
+      "response_schema": "schemas/get-role-response.schema.json",
+      "domain_error_schema": "schemas/get-role-error.schema.json"
+    },
+    {
+      "name": "list_roles",
+      "interaction": "request",
+      "request_schema": "schemas/list-roles-request.schema.json",
+      "response_schema": "schemas/list-roles-response.schema.json",
+      "domain_error_schema": "schemas/list-roles-error.schema.json"
+    },
+    {
+      "name": "list_subject_roles",
+      "interaction": "request",
+      "request_schema": "schemas/list-subject-roles-request.schema.json",
+      "response_schema": "schemas/list-subject-roles-response.schema.json",
+      "domain_error_schema": "schemas/list-subject-roles-error.schema.json"
+    }
+  ]
+}

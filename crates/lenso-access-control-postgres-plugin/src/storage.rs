@@ -30,6 +30,21 @@ pub(crate) struct Bootstrap {
     pub(crate) revision: i64,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct DirectoryRole {
+    pub(crate) role_id: String,
+    pub(crate) name: String,
+    pub(crate) protected: bool,
+    pub(crate) permissions: Vec<String>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub(crate) struct DirectoryRolePage {
+    pub(crate) roles: Vec<DirectoryRole>,
+    pub(crate) revision: i64,
+    pub(crate) has_more: bool,
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(crate) enum DomainFailure {
     Forbidden,
@@ -89,6 +104,139 @@ pub(crate) async fn check_permission(
             .try_get("allowed")
             .map_err(|source| database("decode permission decision", source))?,
         revision,
+    })
+}
+
+pub(crate) async fn get_role(
+    postgres: &OwnedPostgres,
+    scope: &ScopeKey,
+    role_id: &str,
+) -> Result<Result<(DirectoryRole, i64), DomainFailure>, StorageError> {
+    let row = sqlx::query(
+        "SELECT s.policy_revision,r.role_id,r.name,r.protected,COALESCE(array_agg(p.permission ORDER BY p.permission) FILTER (WHERE p.permission IS NOT NULL),ARRAY[]::text[]) AS permissions FROM access_control_scopes s LEFT JOIN access_control_roles r ON r.scope_kind=s.scope_kind AND r.scope_id=s.scope_id AND r.role_id=$3 LEFT JOIN access_control_role_permissions p ON p.scope_kind=r.scope_kind AND p.scope_id=r.scope_id AND p.role_id=r.role_id WHERE s.scope_kind=$1 AND s.scope_id=$2 GROUP BY s.policy_revision,r.role_id,r.name,r.protected",
+    )
+    .bind(&scope.kind)
+    .bind(&scope.id)
+    .bind(role_id)
+    .fetch_optional(postgres.pool())
+    .await
+    .map_err(|source| database("get directory role", source))?;
+    let Some(row) = row else {
+        return Ok(Err(DomainFailure::ScopeNotBootstrapped));
+    };
+    let policy_revision = revision(&row)?;
+    if row
+        .try_get::<Option<String>, _>("role_id")
+        .map_err(|source| database("decode directory role presence", source))?
+        .is_none()
+    {
+        return Ok(Err(DomainFailure::RoleNotFound));
+    }
+    Ok(Ok((decode_directory_role(&row)?, policy_revision)))
+}
+
+pub(crate) async fn list_roles(
+    postgres: &OwnedPostgres,
+    scope: &ScopeKey,
+    after_role_id: Option<&str>,
+    limit: usize,
+) -> Result<Result<DirectoryRolePage, DomainFailure>, StorageError> {
+    list_directory_roles(postgres, scope, None, after_role_id, limit).await
+}
+
+pub(crate) async fn list_subject_roles(
+    postgres: &OwnedPostgres,
+    scope: &ScopeKey,
+    subject: &str,
+    after_role_id: Option<&str>,
+    limit: usize,
+) -> Result<Result<DirectoryRolePage, DomainFailure>, StorageError> {
+    list_directory_roles(postgres, scope, Some(subject), after_role_id, limit).await
+}
+
+async fn list_directory_roles(
+    postgres: &OwnedPostgres,
+    scope: &ScopeKey,
+    subject: Option<&str>,
+    after_role_id: Option<&str>,
+    limit: usize,
+) -> Result<Result<DirectoryRolePage, DomainFailure>, StorageError> {
+    let mut transaction = postgres
+        .pool()
+        .begin()
+        .await
+        .map_err(|source| database("begin directory page", source))?;
+    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+        .execute(&mut *transaction)
+        .await
+        .map_err(|source| database("set directory snapshot", source))?;
+    let policy_revision: Option<i64> = sqlx::query_scalar(
+        "SELECT policy_revision FROM access_control_scopes WHERE scope_kind=$1 AND scope_id=$2",
+    )
+    .bind(&scope.kind)
+    .bind(&scope.id)
+    .fetch_optional(&mut *transaction)
+    .await
+    .map_err(|source| database("read directory policy revision", source))?;
+    let Some(policy_revision) = policy_revision else {
+        return Ok(Err(DomainFailure::ScopeNotBootstrapped));
+    };
+    if policy_revision < 0 {
+        return Err(StorageError::InvalidRevision);
+    }
+    let row_limit = i64::try_from(limit.saturating_add(1)).expect("directory page limit fits i64");
+    let rows = if let Some(subject) = subject {
+        sqlx::query(
+            "SELECT r.role_id,r.name,r.protected,COALESCE(array_agg(p.permission ORDER BY p.permission) FILTER (WHERE p.permission IS NOT NULL),ARRAY[]::text[]) AS permissions FROM access_control_subject_roles b JOIN access_control_roles r ON r.scope_kind=b.scope_kind AND r.scope_id=b.scope_id AND r.role_id=b.role_id LEFT JOIN access_control_role_permissions p ON p.scope_kind=r.scope_kind AND p.scope_id=r.scope_id AND p.role_id=r.role_id WHERE b.scope_kind=$1 AND b.scope_id=$2 AND b.subject=$3 AND ($4::text IS NULL OR r.role_id>$4) GROUP BY r.role_id,r.name,r.protected ORDER BY r.role_id LIMIT $5",
+        )
+        .bind(&scope.kind)
+        .bind(&scope.id)
+        .bind(subject)
+        .bind(after_role_id)
+        .bind(row_limit)
+        .fetch_all(&mut *transaction)
+        .await
+        .map_err(|source| database("list subject directory roles", source))?
+    } else {
+        sqlx::query(
+            "SELECT r.role_id,r.name,r.protected,COALESCE(array_agg(p.permission ORDER BY p.permission) FILTER (WHERE p.permission IS NOT NULL),ARRAY[]::text[]) AS permissions FROM access_control_roles r LEFT JOIN access_control_role_permissions p ON p.scope_kind=r.scope_kind AND p.scope_id=r.scope_id AND p.role_id=r.role_id WHERE r.scope_kind=$1 AND r.scope_id=$2 AND ($3::text IS NULL OR r.role_id>$3) GROUP BY r.role_id,r.name,r.protected ORDER BY r.role_id LIMIT $4",
+        )
+        .bind(&scope.kind)
+        .bind(&scope.id)
+        .bind(after_role_id)
+        .bind(row_limit)
+        .fetch_all(&mut *transaction)
+        .await
+        .map_err(|source| database("list directory roles", source))?
+    };
+    commit(transaction, "commit directory page").await?;
+    let mut roles = rows
+        .iter()
+        .map(decode_directory_role)
+        .collect::<Result<Vec<_>, _>>()?;
+    let has_more = roles.len() > limit;
+    roles.truncate(limit);
+    Ok(Ok(DirectoryRolePage {
+        roles,
+        revision: policy_revision,
+        has_more,
+    }))
+}
+
+fn decode_directory_role(row: &sqlx::postgres::PgRow) -> Result<DirectoryRole, StorageError> {
+    Ok(DirectoryRole {
+        role_id: row
+            .try_get("role_id")
+            .map_err(|source| database("decode directory role id", source))?,
+        name: row
+            .try_get("name")
+            .map_err(|source| database("decode directory role name", source))?,
+        protected: row
+            .try_get("protected")
+            .map_err(|source| database("decode directory role protection", source))?,
+        permissions: row
+            .try_get("permissions")
+            .map_err(|source| database("decode directory role permissions", source))?,
     })
 }
 
