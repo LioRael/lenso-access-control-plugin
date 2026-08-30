@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["scope", "role_id", "permissions"],
+  "properties": {
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {"kind": {"type": "string"}, "id": {"type": "string"}}
+    },
+    "role_id": {"type": "string"},
+    "permissions": {"type": "array", "uniqueItems": true, "maxItems": 256, "items": {"type": "string"}}
+  }
+}

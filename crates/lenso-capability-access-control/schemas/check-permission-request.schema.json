@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["subject", "scope", "permission"],
+  "properties": {
+    "subject": {"type": "string"},
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "id"],
+      "properties": {
+        "kind": {"type": "string"},
+        "id": {"type": "string"}
+      }
+    },
+    "permission": {"type": "string"}
+  }
+}

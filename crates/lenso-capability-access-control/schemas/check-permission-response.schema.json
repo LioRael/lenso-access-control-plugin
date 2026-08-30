@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["allowed", "policy_revision"],
+  "properties": {
+    "allowed": {"type": "boolean"},
+    "policy_revision": {"type": "string", "pattern": "^(0|[1-9][0-9]*)$"}
+  }
+}

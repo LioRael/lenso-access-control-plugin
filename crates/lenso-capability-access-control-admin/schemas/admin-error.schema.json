@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "oneOf": [
+    {"const": "unauthenticated"},
+    {"const": "forbidden"},
+    {"const": "invalid_request"},
+    {"const": "scope_not_bootstrapped"},
+    {"const": "role_already_exists"},
+    {"const": "role_not_found"},
+    {"const": "protected_role"},
+    {"const": "protected_binding"}
+  ]
+}
