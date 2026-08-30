@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": ["next_cursor", "policy_revision", "roles"],
+  "properties": {
+    "next_cursor": {"$ref": "#/$defs/NullableString"},
+    "policy_revision": {"type": "string", "pattern": "^(0|[1-9][0-9]*)$"},
+    "roles": {"type": "array", "items": {"$ref": "#/$defs/Role"}}
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "NullableString": {"type": ["string", "null"]},
+    "Role": {
+      "type": "object",
+      "required": ["name", "permissions", "protected", "role_id"],
+      "properties": {
+        "name": {"type": "string"},
+        "permissions": {"type": "array", "items": {"type": "string"}},
+        "protected": {"type": "boolean"},
+        "role_id": {"type": "string"}
+      },
+      "additionalProperties": false
+    }
+  }
+}

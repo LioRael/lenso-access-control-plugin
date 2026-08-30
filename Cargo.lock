@@ -694,6 +694,7 @@ dependencies = [
  "lenso-auth-sdk",
  "lenso-capability-access-control",
  "lenso-capability-access-control-admin",
+ "lenso-capability-access-control-directory",
  "lenso-capability-secrets",
  "lenso-kernel",
  "lenso-native-adapter",
@@ -747,6 +748,19 @@ dependencies = [
 
 [[package]]
 name = "lenso-capability-access-control-admin"
+version = "0.1.0"
+dependencies = [
+ "futures",
+ "lenso-contract-codegen",
+ "lenso-contract-runtime",
+ "lenso-kernel",
+ "lenso-plugin-authoring",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "lenso-capability-access-control-directory"
 version = "0.1.0"
 dependencies = [
  "futures",

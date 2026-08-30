@@ -116,6 +116,63 @@ async fn durable_policy_preserves_union_revision_and_bootstrap_protection() {
     assert!(read.allowed && write.allowed);
     assert_eq!(read.revision, 7);
     assert_eq!(write.revision, 7);
+
+    let (viewer_role, viewer_revision) = storage::get_role(&postgres, &scope, "viewer")
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(viewer_revision, 7);
+    assert_eq!(viewer_role.name, "Viewer");
+    assert_eq!(viewer_role.permissions, vec!["document.read"]);
+    assert!(!viewer_role.protected);
+
+    let first_page = storage::list_roles(&postgres, &scope, None, 1)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(first_page.revision, 7);
+    assert!(first_page.has_more);
+    assert_eq!(first_page.roles.len(), 1);
+    assert_eq!(first_page.roles[0].role_id, BOOTSTRAP_ROLE_ID);
+    let second_page =
+        storage::list_roles(&postgres, &scope, Some(&first_page.roles[0].role_id), 10)
+            .await
+            .unwrap()
+            .unwrap();
+    assert!(!second_page.has_more);
+    assert_eq!(
+        second_page
+            .roles
+            .iter()
+            .map(|role| role.role_id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["editor", "viewer"]
+    );
+
+    let subject_roles = storage::list_subject_roles(&postgres, &scope, "usr_member", None, 10)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(subject_roles.revision, 7);
+    assert_eq!(
+        subject_roles
+            .roles
+            .iter()
+            .map(|role| role.role_id.as_str())
+            .collect::<Vec<_>>(),
+        vec!["editor", "viewer"]
+    );
+    let unbootstrapped_scope = ScopeKey {
+        kind: "organization".to_owned(),
+        id: "org_missing".to_owned(),
+    };
+    assert_eq!(
+        storage::list_roles(&postgres, &unbootstrapped_scope, None, 10)
+            .await
+            .unwrap(),
+        Err(DomainFailure::ScopeNotBootstrapped)
+    );
+
     let missing = storage::check_permission(&postgres, &scope, "usr_missing", "document.read")
         .await
         .unwrap();

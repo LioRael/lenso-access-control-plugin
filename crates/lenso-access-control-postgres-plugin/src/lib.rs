@@ -24,6 +24,12 @@ use lenso_capability_access_control_admin::{
     RevokeRoleRequest, RevokeRoleResponse, SetRolePermissionsError, SetRolePermissionsRequest,
     SetRolePermissionsResponse,
 };
+use lenso_capability_access_control_directory as directory;
+use lenso_capability_access_control_directory::{
+    GetRoleError, GetRoleRequest, GetRoleResponse, ListRolesError, ListRolesRequest,
+    ListRolesResponse, ListSubjectRolesError, ListSubjectRolesRequest, ListSubjectRolesResponse,
+    Role,
+};
 use lenso_capability_secrets as secrets;
 use lenso_capability_secrets::{ResolveRequest, SecretsClient, SecretsInvocationError};
 use lenso_kernel::{PluginDependencies, RuntimeFailure};
@@ -53,6 +59,7 @@ const MAX_ROLE_NAME_BYTES: usize = 200;
 const MAX_PERMISSION_BYTES: usize = 200;
 const MAX_PERMISSIONS_PER_ROLE: usize = 256;
 const MAX_BOOTSTRAP_CALLERS: usize = 64;
+const MAX_DIRECTORY_CALLERS: usize = 64;
 
 /// Immutable configuration for one `PostgreSQL` Access Control Instance.
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -63,6 +70,8 @@ pub struct AccessControlConfig {
     auth_issuer: String,
     auth_assertion_public_key: String,
     bootstrap_callers: Vec<String>,
+    #[serde(default)]
+    directory_callers: Vec<String>,
 }
 
 impl AccessControlConfig {
@@ -80,9 +89,20 @@ impl AccessControlConfig {
             auth_issuer: auth_issuer.into(),
             auth_assertion_public_key: auth_assertion_public_key.into(),
             bootstrap_callers,
+            directory_callers: Vec::new(),
         };
         config.validate()?;
         Ok(config)
+    }
+
+    /// Adds the exact peer Plugin Instance keys admitted to directory reads.
+    pub fn with_directory_callers(
+        mut self,
+        directory_callers: Vec<String>,
+    ) -> Result<Self, AccessControlConfigError> {
+        self.directory_callers = directory_callers;
+        self.validate()?;
+        Ok(self)
     }
 
     fn validate(&self) -> Result<(), AccessControlConfigError> {
@@ -113,6 +133,19 @@ impl AccessControlConfig {
         {
             return Err(AccessControlConfigError::DuplicateBootstrapCaller);
         }
+        if self.directory_callers.len() > MAX_DIRECTORY_CALLERS
+            || self
+                .directory_callers
+                .iter()
+                .any(|caller| !valid_identifier(caller, 256))
+        {
+            return Err(AccessControlConfigError::InvalidDirectoryCallers);
+        }
+        if self.directory_callers.iter().collect::<BTreeSet<_>>().len()
+            != self.directory_callers.len()
+        {
+            return Err(AccessControlConfigError::DuplicateDirectoryCaller);
+        }
         Ok(())
     }
 
@@ -142,6 +175,10 @@ pub enum AccessControlConfigError {
     InvalidBootstrapCallers,
     #[error("bootstrap_callers must not contain duplicates")]
     DuplicateBootstrapCaller,
+    #[error("directory_callers must contain at most 64 valid Instance keys")]
+    InvalidDirectoryCallers,
+    #[error("directory_callers must not contain duplicates")]
+    DuplicateDirectoryCaller,
 }
 
 fn validate_config(config: &AccessControlConfig) -> Result<(), RuntimeFailure> {
@@ -180,11 +217,19 @@ impl fmt::Debug for PostgresAccessControlPlugin {
                 "bootstrap_caller_count",
                 &self.config.bootstrap_callers.len(),
             )
+            .field(
+                "directory_caller_count",
+                &self.config.directory_callers.len(),
+            )
             .finish_non_exhaustive()
     }
 }
 
-#[lenso::provides(access_control::AccessControl, admin::AccessControlAdmin)]
+#[lenso::provides(
+    access_control::AccessControl,
+    admin::AccessControlAdmin,
+    directory::AccessControlDirectory
+)]
 impl PostgresAccessControlPlugin {}
 
 impl PostgresAccessControlPlugin {
@@ -214,6 +259,132 @@ impl PostgresAccessControlPlugin {
         Ok(CheckPermissionResponse {
             allowed: decision.allowed,
             policy_revision: revision_string(decision.revision)?,
+        })
+    }
+
+    async fn get_role(
+        &self,
+        context: Ctx,
+        request: GetRoleRequest,
+    ) -> PluginResult<GetRoleResponse, GetRoleError> {
+        if !self.directory_authorized(&context) {
+            return Err(PluginError::domain(GetRoleError::Forbidden));
+        }
+        let scope = ScopeKey {
+            kind: request.scope.kind,
+            id: request.scope.id,
+        };
+        if !valid_scope(&scope) || !valid_role_id(&request.role_id) {
+            return Err(PluginError::domain(GetRoleError::InvalidRequest));
+        }
+        let (role, revision) = storage::get_role(
+            &self.prepared().map_err(PluginError::runtime)?.postgres,
+            &scope,
+            &request.role_id,
+        )
+        .await
+        .map_err(|error| storage_runtime(&error))?
+        .map_err(|failure| PluginError::domain(map_get_role_failure(failure)))?;
+        Ok(GetRoleResponse {
+            name: role.name,
+            permissions: role.permissions,
+            policy_revision: revision_string(revision)?,
+            protected: role.protected,
+            role_id: role.role_id,
+        })
+    }
+
+    async fn list_roles(
+        &self,
+        context: Ctx,
+        request: ListRolesRequest,
+    ) -> PluginResult<ListRolesResponse, ListRolesError> {
+        if !self.directory_authorized(&context) {
+            return Err(PluginError::domain(ListRolesError::Forbidden));
+        }
+        let scope = ScopeKey {
+            kind: request.scope.kind,
+            id: request.scope.id,
+        };
+        if !valid_scope(&scope) {
+            return Err(PluginError::domain(ListRolesError::InvalidRequest));
+        }
+        let Some(limit) = valid_directory_page(request.limit, request.cursor.as_deref()) else {
+            return Err(PluginError::domain(ListRolesError::InvalidPage));
+        };
+        let page = storage::list_roles(
+            &self.prepared().map_err(PluginError::runtime)?.postgres,
+            &scope,
+            request.cursor.as_deref(),
+            limit,
+        )
+        .await
+        .map_err(|error| storage_runtime(&error))?
+        .map_err(|failure| PluginError::domain(map_list_roles_failure(failure)))?;
+        let roles = page
+            .roles
+            .into_iter()
+            .map(directory_role)
+            .collect::<Vec<_>>();
+        let next_cursor = page.has_more.then(|| {
+            roles
+                .last()
+                .expect("non-empty truncated page")
+                .role_id
+                .clone()
+        });
+        Ok(ListRolesResponse {
+            next_cursor,
+            policy_revision: revision_string(page.revision)?,
+            roles,
+        })
+    }
+
+    async fn list_subject_roles(
+        &self,
+        context: Ctx,
+        request: ListSubjectRolesRequest,
+    ) -> PluginResult<ListSubjectRolesResponse, ListSubjectRolesError> {
+        if !self.directory_authorized(&context) {
+            return Err(PluginError::domain(ListSubjectRolesError::Forbidden));
+        }
+        let scope = ScopeKey {
+            kind: request.scope.kind,
+            id: request.scope.id,
+        };
+        if !valid_scope(&scope) || !valid_subject(&request.subject) {
+            return Err(PluginError::domain(ListSubjectRolesError::InvalidRequest));
+        }
+        let Some(limit) = valid_directory_page(request.limit, request.cursor.as_deref()) else {
+            return Err(PluginError::domain(ListSubjectRolesError::InvalidPage));
+        };
+        let page = storage::list_subject_roles(
+            &self.prepared().map_err(PluginError::runtime)?.postgres,
+            &scope,
+            &request.subject,
+            request.cursor.as_deref(),
+            limit,
+        )
+        .await
+        .map_err(|error| storage_runtime(&error))?
+        .map_err(|failure| PluginError::domain(map_list_subject_roles_failure(failure)))?;
+        let roles = page
+            .roles
+            .into_iter()
+            .map(directory_role)
+            .collect::<Vec<_>>();
+        let next_cursor = page.has_more.then(|| {
+            roles
+                .last()
+                .expect("non-empty truncated page")
+                .role_id
+                .clone()
+        });
+        Ok(ListSubjectRolesResponse {
+            next_cursor,
+            policy_revision: revision_string(page.revision)?,
+            roles,
+            subject: request.subject,
         })
     }
 
@@ -428,6 +599,15 @@ impl PostgresAccessControlPlugin {
         })
     }
 
+    fn directory_authorized(&self, context: &Ctx) -> bool {
+        context.caller_instance().is_some_and(|caller| {
+            self.config
+                .directory_callers
+                .iter()
+                .any(|allowed| allowed == caller)
+        })
+    }
+
     fn authenticated_subject(&self, context: &Ctx, operation: &str) -> Result<String, ()> {
         let actor = self
             .config
@@ -629,6 +809,44 @@ fn map_revoke_role_failure(failure: DomainFailure) -> RevokeRoleError {
     }
 }
 
+fn map_get_role_failure(failure: DomainFailure) -> GetRoleError {
+    match failure {
+        DomainFailure::ScopeNotBootstrapped => GetRoleError::ScopeNotBootstrapped,
+        DomainFailure::RoleNotFound => GetRoleError::RoleNotFound,
+        _ => GetRoleError::InvalidRequest,
+    }
+}
+
+fn map_list_roles_failure(failure: DomainFailure) -> ListRolesError {
+    match failure {
+        DomainFailure::ScopeNotBootstrapped => ListRolesError::ScopeNotBootstrapped,
+        _ => ListRolesError::InvalidRequest,
+    }
+}
+
+fn map_list_subject_roles_failure(failure: DomainFailure) -> ListSubjectRolesError {
+    match failure {
+        DomainFailure::ScopeNotBootstrapped => ListSubjectRolesError::ScopeNotBootstrapped,
+        _ => ListSubjectRolesError::InvalidRequest,
+    }
+}
+
+fn directory_role(role: storage::DirectoryRole) -> Role {
+    Role {
+        name: role.name,
+        permissions: role.permissions,
+        protected: role.protected,
+        role_id: role.role_id,
+    }
+}
+
+fn valid_directory_page(limit: i64, cursor: Option<&str>) -> Option<usize> {
+    if !(1..=100).contains(&limit) || cursor.is_some_and(|value| !valid_role_id(value)) {
+        return None;
+    }
+    usize::try_from(limit).ok()
+}
+
 fn valid_scope(scope: &ScopeKey) -> bool {
     valid_scope_kind(&scope.kind) && valid_opaque_id(&scope.id, MAX_SCOPE_ID_BYTES)
 }
@@ -709,6 +927,8 @@ mod tests {
             vec!["organization-provisioner".to_owned()],
         )
         .unwrap()
+        .with_directory_callers(vec!["access-request".to_owned()])
+        .unwrap()
     }
 
     fn context(caller: &str) -> InvocationContext {
@@ -735,7 +955,11 @@ mod tests {
             .collect::<BTreeSet<_>>();
         assert_eq!(
             provided,
-            BTreeSet::from([access_control::CAPABILITY_ID, admin::CAPABILITY_ID])
+            BTreeSet::from([
+                access_control::CAPABILITY_ID,
+                admin::CAPABILITY_ID,
+                directory::CAPABILITY_ID,
+            ])
         );
         assert_eq!(
             descriptor["required_capabilities"][0]["capability_id"],
@@ -766,6 +990,13 @@ mod tests {
         assert_eq!(
             invalid.validate(),
             Err(AccessControlConfigError::DuplicateBootstrapCaller)
+        );
+
+        let mut invalid = config();
+        invalid.directory_callers.push("access-request".to_owned());
+        assert_eq!(
+            invalid.validate(),
+            Err(AccessControlConfigError::DuplicateDirectoryCaller)
         );
     }
 
@@ -815,6 +1046,54 @@ mod tests {
         assert_eq!(
             result,
             Err(PluginError::Domain(CreateRoleError::Unauthenticated))
+        );
+    }
+
+    #[test]
+    fn directory_reads_require_the_exact_configured_caller_before_storage() {
+        let result = futures::executor::block_on(plugin().get_role(
+            context("another-plugin"),
+            GetRoleRequest {
+                role_id: "viewer".to_owned(),
+                scope: directory::Scope {
+                    id: "org_42".to_owned(),
+                    kind: "organization".to_owned(),
+                },
+            },
+        ));
+        assert_eq!(result, Err(PluginError::Domain(GetRoleError::Forbidden)));
+    }
+
+    #[test]
+    fn directory_pages_validate_before_storage() {
+        let roles = futures::executor::block_on(plugin().list_roles(
+            context("access-request"),
+            ListRolesRequest {
+                cursor: None,
+                limit: 0,
+                scope: directory::Scope {
+                    id: "org_42".to_owned(),
+                    kind: "organization".to_owned(),
+                },
+            },
+        ));
+        assert_eq!(roles, Err(PluginError::Domain(ListRolesError::InvalidPage)));
+
+        let subject_roles = futures::executor::block_on(plugin().list_subject_roles(
+            context("access-request"),
+            ListSubjectRolesRequest {
+                cursor: None,
+                limit: 10,
+                scope: directory::Scope {
+                    id: "org_42".to_owned(),
+                    kind: "organization".to_owned(),
+                },
+                subject: "invalid subject".to_owned(),
+            },
+        ));
+        assert_eq!(
+            subject_roles,
+            Err(PluginError::Domain(ListSubjectRolesError::InvalidRequest))
         );
     }
 
