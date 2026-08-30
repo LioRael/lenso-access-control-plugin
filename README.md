@@ -82,3 +82,10 @@ LENSO_ACCESS_CONTROL_TEST_DATABASE_URL=postgres://... \
   test --locked -p lenso-access-control-postgres-plugin \
   --features postgres-acceptance
 ```
+
+## Releases
+
+The Capability crates and PostgreSQL implementation are published separately
+so Access Control remains an independent, replaceable Plugin rather than an
+Organization-internal policy table. Future releases use crates.io Trusted
+Publishing; see [`docs/release-process.md`](docs/release-process.md).
