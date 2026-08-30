@@ -1,0 +1,14 @@
+{
+  "id": "lenso.access-control-admin@1",
+  "version": "1.0.0",
+  "portable": true,
+  "cross_lane_transfer": true,
+  "operations": [
+    {"name":"bootstrap_scope","interaction":"request","request_schema":"schemas/bootstrap-scope-request.schema.json","response_schema":"schemas/bootstrap-scope-response.schema.json","domain_error_schema":"schemas/bootstrap-scope-error.schema.json"},
+    {"name":"create_role","interaction":"request","request_schema":"schemas/create-role-request.schema.json","response_schema":"schemas/mutation-response.schema.json","domain_error_schema":"schemas/admin-error.schema.json"},
+    {"name":"set_role_permissions","interaction":"request","request_schema":"schemas/set-role-permissions-request.schema.json","response_schema":"schemas/mutation-response.schema.json","domain_error_schema":"schemas/admin-error.schema.json"},
+    {"name":"delete_role","interaction":"request","request_schema":"schemas/delete-role-request.schema.json","response_schema":"schemas/mutation-response.schema.json","domain_error_schema":"schemas/admin-error.schema.json"},
+    {"name":"assign_role","interaction":"request","request_schema":"schemas/role-binding-request.schema.json","response_schema":"schemas/mutation-response.schema.json","domain_error_schema":"schemas/admin-error.schema.json"},
+    {"name":"revoke_role","interaction":"request","request_schema":"schemas/role-binding-request.schema.json","response_schema":"schemas/mutation-response.schema.json","domain_error_schema":"schemas/admin-error.schema.json"}
+  ]
+}
