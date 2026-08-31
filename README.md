@@ -67,9 +67,9 @@ lenso-contract-codegen check \
 lenso-contract-codegen check \
   crates/lenso-capability-access-control-directory/capability.json \
   --rust crates/lenso-capability-access-control-directory/src/generated.rs
-/Users/leosouthey/Projects/framework/.lenso-tools/bin/lenso-cargo \
+cargo \
   check --locked --workspace --all-targets
-/Users/leosouthey/Projects/framework/.lenso-tools/bin/lenso-cargo \
+cargo \
   test --locked --workspace
 ```
 
@@ -78,7 +78,7 @@ starts with `lenso_access_control_test`:
 
 ```sh
 LENSO_ACCESS_CONTROL_TEST_DATABASE_URL=postgres://... \
-  /Users/leosouthey/Projects/framework/.lenso-tools/bin/lenso-cargo \
+  cargo \
   test --locked -p lenso-access-control-postgres-plugin \
   --features postgres-acceptance
 ```
