@@ -34,6 +34,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: ./scripts/check-repository-boundary.sh
       - run: cargo fmt --all -- --check
+      - name: Check generated contracts
+        run: |
+          cargo install --locked --version '=0.6.5' lenso-contract-codegen
+          lenso-contract-codegen workspace check --manifest-path Cargo.toml
       - run: cargo check --locked --workspace --all-targets
       - run: cargo test --locked --workspace --features postgres-acceptance
       - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
