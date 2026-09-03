@@ -8,7 +8,9 @@ This repository provides:
 - `lenso.access-control-admin@1` for bootstrap, role, grant, and binding
   administration; and
 - `lenso.access-control-directory@1` for read-only role and subject-binding
-  projections admitted to exact peer Plugin Instance keys; and
+  projections admitted to exact peer Plugin Instance keys;
+- private `lenso.access-control.agent-tools` for Console Agent inspection and
+  post-bootstrap role administration; and
 - `lenso-access-control-postgres-plugin`, which owns one operator-managed
   PostgreSQL schema.
 
@@ -40,6 +42,11 @@ approve a role. Callers such as Access Request must combine the immutable role
 snapshot with Organization Membership, their own workflow, and final
 resource-local authorization. Directory caller admission is intentionally
 separate from bootstrap authority and post-bootstrap human administration.
+
+The Agent Tool adapter forwards the invocation context unchanged. Access
+Control therefore still verifies an operation-audienced ActorAssertion and
+the actor's current scoped permission for every mutation. Scope bootstrap is
+intentionally absent from the Tool catalog and remains operator-controlled.
 
 ## Operator setup
 
