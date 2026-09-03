@@ -726,7 +726,7 @@ dependencies = [
 
 [[package]]
 name = "lenso-access-control-postgres-plugin"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "futures",
  "lenso",
@@ -778,7 +778,7 @@ dependencies = [
 
 [[package]]
 name = "lenso-capability-access-control"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "futures",
  "lenso-contract-runtime",
@@ -790,7 +790,7 @@ dependencies = [
 
 [[package]]
 name = "lenso-capability-access-control-admin"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "futures",
  "lenso-contract-runtime",
@@ -802,7 +802,7 @@ dependencies = [
 
 [[package]]
 name = "lenso-capability-access-control-directory"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "futures",
  "lenso-contract-runtime",

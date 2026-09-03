@@ -15,8 +15,8 @@ root-slot = "tool-providers"
 [dependencies]
 futures.workspace = true
 lenso.workspace = true
-lenso-capability-access-control-admin = { path = "../lenso-capability-access-control-admin", version = "0.1.1" }
-lenso-capability-access-control-directory = { path = "../lenso-capability-access-control-directory", version = "0.1.1" }
+lenso-capability-access-control-admin = { path = "../lenso-capability-access-control-admin", version = "0.1.2" }
+lenso-capability-access-control-directory = { path = "../lenso-capability-access-control-directory", version = "0.1.2" }
 lenso-capability-agent-tool-provider.workspace = true
 lenso-kernel.workspace = true
 serde.workspace = true
