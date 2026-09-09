@@ -3,13 +3,16 @@ use std::{fmt, rc::Rc};
 use futures::future::LocalBoxFuture;
 use lenso_kernel::{InvocationContext, NativeRequestEndpoint, NativeRequestFuture, NativeRequestHandle, PluginDependencies, RequestCapability, RuntimeFailure};
 
-use lenso_plugin_authoring::{BoundCapabilityClient, CapabilityClient, CapabilityClientMany};
+use lenso_plugin_authoring::{BoundCapabilityClient, CapabilityClient, CapabilityClientMany, CapabilityReference};
 pub const CAPABILITY_ID: &str = "lenso.access-control-directory@1";
 pub const DESCRIPTOR_VERSION: &str = "1.0.0";
+pub const DESCRIPTOR_DIGEST: &str = "sha256:caf52998352bd98c94347a56fe2783e10fddbfb9f7cfaae1859152f645e2c8a0";
 pub const PORTABLE: bool = true;
 pub const CROSS_LANE_TRANSFER: bool = true;
 pub const ACCESS_CONTROL_DIRECTORY_CAPABILITY_ID: &str = CAPABILITY_ID;
 pub const ACCESS_CONTROL_DIRECTORY_DESCRIPTOR_VERSION: &str = DESCRIPTOR_VERSION;
+pub const ACCESS_CONTROL_DIRECTORY_DESCRIPTOR_DIGEST: &str = DESCRIPTOR_DIGEST;
+pub const ACCESS_CONTROL_DIRECTORY_CONTRACT: CapabilityReference<AccessControlDirectoryClient> = CapabilityReference::new(CAPABILITY_ID, DESCRIPTOR_VERSION, DESCRIPTOR_DIGEST);
 
 #[doc(hidden)]
 #[macro_export]
@@ -17,11 +20,23 @@ macro_rules! __lenso_provided_access_control_directory { () => { "{\"capability_
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __lenso_required_access_control_directory_client { () => { "{\"capability_id\":\"lenso.access-control-directory@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"one\"}" }; }
+macro_rules! __lenso_required_access_control_directory_client {
+    () => { "{\"capability_id\":\"lenso.access-control-directory@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"one\"}" };
+    ($requirement_id:literal) => { concat!("{\"requirement_id\":", stringify!($requirement_id), ",\"capability_id\":\"lenso.access-control-directory@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"one\"}") };
+}
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __lenso_required_many_access_control_directory_client { () => { "{\"capability_id\":\"lenso.access-control-directory@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"many\"}" }; }
+macro_rules! __lenso_required_optional_access_control_directory_client {
+    ($requirement_id:literal) => { concat!("{\"requirement_id\":", stringify!($requirement_id), ",\"capability_id\":\"lenso.access-control-directory@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"optional\"}") };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __lenso_required_many_access_control_directory_client {
+    () => { "{\"capability_id\":\"lenso.access-control-directory@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"many\"}" };
+    ($requirement_id:literal) => { concat!("{\"requirement_id\":", stringify!($requirement_id), ",\"capability_id\":\"lenso.access-control-directory@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"many\"}") };
+}
 
 pub const GET_ROLE_OPERATION: &str = "get_role";
 pub const LIST_ROLES_OPERATION: &str = "list_roles";
@@ -543,6 +558,71 @@ macro_rules! __lenso_native_lower_access_control_directory {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __lenso_native_lower_object_access_control_directory {
+    ($object:ty, $plugin:ty, $support:path) => {
+        use $support as __LensoNativeSupportAccessControlDirectory;
+        impl $crate::AccessControlDirectoryProvider for $object {
+        fn get_role(&self, context: __LensoNativeSupportAccessControlDirectory::InvocationContext, request: $crate::GetRoleRequest) -> __LensoNativeSupportAccessControlDirectory::NativeRequestFuture<$crate::AccessControlDirectoryGetRole> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                let result = <$plugin>::get_role(plugin.as_ref(), context, request).await;
+                $crate::__LensoIntoAccessControlDirectoryGetRoleResult::__lenso_into_result(result)
+            })
+        }
+        fn list_roles(&self, context: __LensoNativeSupportAccessControlDirectory::InvocationContext, request: $crate::ListRolesRequest) -> __LensoNativeSupportAccessControlDirectory::NativeRequestFuture<$crate::AccessControlDirectoryListRoles> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                let result = <$plugin>::list_roles(plugin.as_ref(), context, request).await;
+                $crate::__LensoIntoAccessControlDirectoryListRolesResult::__lenso_into_result(result)
+            })
+        }
+        fn list_subject_roles(&self, context: __LensoNativeSupportAccessControlDirectory::InvocationContext, request: $crate::ListSubjectRolesRequest) -> __LensoNativeSupportAccessControlDirectory::NativeRequestFuture<$crate::AccessControlDirectoryListSubjectRoles> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                let result = <$plugin>::list_subject_roles(plugin.as_ref(), context, request).await;
+                $crate::__LensoIntoAccessControlDirectoryListSubjectRolesResult::__lenso_into_result(result)
+            })
+        }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __lenso_native_lower_trait_object_access_control_directory {
+    ($object:ty, $plugin:ty, $support:path) => {
+        use $support as __LensoNativeSupportAccessControlDirectory;
+        impl $crate::AccessControlDirectoryProvider for $object {
+        fn get_role(&self, context: __LensoNativeSupportAccessControlDirectory::InvocationContext, request: $crate::GetRoleRequest) -> __LensoNativeSupportAccessControlDirectory::NativeRequestFuture<$crate::AccessControlDirectoryGetRole> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                <$plugin as $crate::AccessControlDirectoryProvider>::get_role(plugin.as_ref(), context, request).await
+            })
+        }
+        fn list_roles(&self, context: __LensoNativeSupportAccessControlDirectory::InvocationContext, request: $crate::ListRolesRequest) -> __LensoNativeSupportAccessControlDirectory::NativeRequestFuture<$crate::AccessControlDirectoryListRoles> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                <$plugin as $crate::AccessControlDirectoryProvider>::list_roles(plugin.as_ref(), context, request).await
+            })
+        }
+        fn list_subject_roles(&self, context: __LensoNativeSupportAccessControlDirectory::InvocationContext, request: $crate::ListSubjectRolesRequest) -> __LensoNativeSupportAccessControlDirectory::NativeRequestFuture<$crate::AccessControlDirectoryListSubjectRoles> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                <$plugin as $crate::AccessControlDirectoryProvider>::list_subject_roles(plugin.as_ref(), context, request).await
+            })
+        }
+        }
+    };
+}
+
 #[derive(Debug)]
 struct AccessControlDirectoryRequestEndpoint { provider: Rc<dyn AccessControlDirectoryProvider> }
 
@@ -641,7 +721,7 @@ macro_rules! __lenso_native_provide_access_control_directory {
     }};
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AccessControlDirectoryClient {
     get_role: NativeRequestHandle<AccessControlDirectoryGetRole>,
     list_roles: NativeRequestHandle<AccessControlDirectoryListRoles>,
@@ -650,6 +730,13 @@ pub struct AccessControlDirectoryClient {
 impl AccessControlDirectoryClient {
     pub fn from_dependencies(dependencies: &PluginDependencies) -> Result<Self, RuntimeFailure> {
         <Self as CapabilityClient>::from_dependencies(dependencies)
+    }
+
+    pub fn from_requirement(
+        dependencies: &PluginDependencies,
+        requirement_id: &str,
+    ) -> Result<Self, RuntimeFailure> {
+        <Self as CapabilityClient>::from_requirement(dependencies, requirement_id)
     }
 
     pub async fn get_role(&self, request: GetRoleRequest) -> Result<GetRoleResponse, AccessControlDirectoryGetRoleInvocationError> {
@@ -704,6 +791,14 @@ impl CapabilityClient for AccessControlDirectoryClient {
         })
     }
 
+    fn from_requirement(
+        dependencies: &PluginDependencies,
+        requirement_id: &str,
+    ) -> Result<Self, RuntimeFailure> {
+        let dependencies = dependencies.requirement(requirement_id)?;
+        Self::from_dependencies(&dependencies)
+    }
+
     fn already_connected() -> RuntimeFailure {
         RuntimeFailure::PluginFailure {
             detail: format!("Capability Port {CAPABILITY_ID} was connected more than once"),
@@ -730,6 +825,14 @@ impl CapabilityClientMany for AccessControlDirectoryClient {
                 ))
             })
             .collect()
+    }
+
+    fn many_from_requirement(
+        dependencies: &PluginDependencies,
+        requirement_id: &str,
+    ) -> Result<Vec<BoundCapabilityClient<Self>>, RuntimeFailure> {
+        let dependencies = dependencies.requirement(requirement_id)?;
+        Self::many_from_dependencies(&dependencies)
     }
 }
 

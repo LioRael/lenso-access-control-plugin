@@ -3,13 +3,16 @@ use std::{fmt, rc::Rc};
 use futures::future::LocalBoxFuture;
 use lenso_kernel::{InvocationContext, NativeRequestEndpoint, NativeRequestFuture, NativeRequestHandle, PluginDependencies, RequestCapability, RuntimeFailure};
 
-use lenso_plugin_authoring::{BoundCapabilityClient, CapabilityClient, CapabilityClientMany};
+use lenso_plugin_authoring::{BoundCapabilityClient, CapabilityClient, CapabilityClientMany, CapabilityReference};
 pub const CAPABILITY_ID: &str = "lenso.access-control-admin@1";
 pub const DESCRIPTOR_VERSION: &str = "1.0.0";
+pub const DESCRIPTOR_DIGEST: &str = "sha256:e6138ff421ebeabea6d4ccc45e72f8001ee979843e8891891dc2feac8436140f";
 pub const PORTABLE: bool = true;
 pub const CROSS_LANE_TRANSFER: bool = true;
 pub const ACCESS_CONTROL_ADMIN_CAPABILITY_ID: &str = CAPABILITY_ID;
 pub const ACCESS_CONTROL_ADMIN_DESCRIPTOR_VERSION: &str = DESCRIPTOR_VERSION;
+pub const ACCESS_CONTROL_ADMIN_DESCRIPTOR_DIGEST: &str = DESCRIPTOR_DIGEST;
+pub const ACCESS_CONTROL_ADMIN_CONTRACT: CapabilityReference<AccessControlAdminClient> = CapabilityReference::new(CAPABILITY_ID, DESCRIPTOR_VERSION, DESCRIPTOR_DIGEST);
 
 #[doc(hidden)]
 #[macro_export]
@@ -17,11 +20,23 @@ macro_rules! __lenso_provided_access_control_admin { () => { "{\"capability_id\"
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __lenso_required_access_control_admin_client { () => { "{\"capability_id\":\"lenso.access-control-admin@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"one\"}" }; }
+macro_rules! __lenso_required_access_control_admin_client {
+    () => { "{\"capability_id\":\"lenso.access-control-admin@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"one\"}" };
+    ($requirement_id:literal) => { concat!("{\"requirement_id\":", stringify!($requirement_id), ",\"capability_id\":\"lenso.access-control-admin@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"one\"}") };
+}
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! __lenso_required_many_access_control_admin_client { () => { "{\"capability_id\":\"lenso.access-control-admin@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"many\"}" }; }
+macro_rules! __lenso_required_optional_access_control_admin_client {
+    ($requirement_id:literal) => { concat!("{\"requirement_id\":", stringify!($requirement_id), ",\"capability_id\":\"lenso.access-control-admin@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"optional\"}") };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __lenso_required_many_access_control_admin_client {
+    () => { "{\"capability_id\":\"lenso.access-control-admin@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"many\"}" };
+    ($requirement_id:literal) => { concat!("{\"requirement_id\":", stringify!($requirement_id), ",\"capability_id\":\"lenso.access-control-admin@1\",\"descriptor_version\":\"1.0.0\",\"cardinality\":\"many\"}") };
+}
 
 pub const ASSIGN_ROLE_OPERATION: &str = "assign_role";
 pub const BOOTSTRAP_SCOPE_OPERATION: &str = "bootstrap_scope";
@@ -1072,6 +1087,116 @@ macro_rules! __lenso_native_lower_access_control_admin {
     };
 }
 
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __lenso_native_lower_object_access_control_admin {
+    ($object:ty, $plugin:ty, $support:path) => {
+        use $support as __LensoNativeSupportAccessControlAdmin;
+        impl $crate::AccessControlAdminProvider for $object {
+        fn assign_role(&self, context: __LensoNativeSupportAccessControlAdmin::InvocationContext, request: $crate::AssignRoleRequest) -> __LensoNativeSupportAccessControlAdmin::NativeRequestFuture<$crate::AccessControlAdminAssignRole> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                let result = <$plugin>::assign_role(plugin.as_ref(), context, request).await;
+                $crate::__LensoIntoAccessControlAdminAssignRoleResult::__lenso_into_result(result)
+            })
+        }
+        fn bootstrap_scope(&self, context: __LensoNativeSupportAccessControlAdmin::InvocationContext, request: $crate::BootstrapScopeRequest) -> __LensoNativeSupportAccessControlAdmin::NativeRequestFuture<$crate::AccessControlAdminBootstrapScope> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                let result = <$plugin>::bootstrap_scope(plugin.as_ref(), context, request).await;
+                $crate::__LensoIntoAccessControlAdminBootstrapScopeResult::__lenso_into_result(result)
+            })
+        }
+        fn create_role(&self, context: __LensoNativeSupportAccessControlAdmin::InvocationContext, request: $crate::CreateRoleRequest) -> __LensoNativeSupportAccessControlAdmin::NativeRequestFuture<$crate::AccessControlAdminCreateRole> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                let result = <$plugin>::create_role(plugin.as_ref(), context, request).await;
+                $crate::__LensoIntoAccessControlAdminCreateRoleResult::__lenso_into_result(result)
+            })
+        }
+        fn delete_role(&self, context: __LensoNativeSupportAccessControlAdmin::InvocationContext, request: $crate::DeleteRoleRequest) -> __LensoNativeSupportAccessControlAdmin::NativeRequestFuture<$crate::AccessControlAdminDeleteRole> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                let result = <$plugin>::delete_role(plugin.as_ref(), context, request).await;
+                $crate::__LensoIntoAccessControlAdminDeleteRoleResult::__lenso_into_result(result)
+            })
+        }
+        fn revoke_role(&self, context: __LensoNativeSupportAccessControlAdmin::InvocationContext, request: $crate::RevokeRoleRequest) -> __LensoNativeSupportAccessControlAdmin::NativeRequestFuture<$crate::AccessControlAdminRevokeRole> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                let result = <$plugin>::revoke_role(plugin.as_ref(), context, request).await;
+                $crate::__LensoIntoAccessControlAdminRevokeRoleResult::__lenso_into_result(result)
+            })
+        }
+        fn set_role_permissions(&self, context: __LensoNativeSupportAccessControlAdmin::InvocationContext, request: $crate::SetRolePermissionsRequest) -> __LensoNativeSupportAccessControlAdmin::NativeRequestFuture<$crate::AccessControlAdminSetRolePermissions> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                let result = <$plugin>::set_role_permissions(plugin.as_ref(), context, request).await;
+                $crate::__LensoIntoAccessControlAdminSetRolePermissionsResult::__lenso_into_result(result)
+            })
+        }
+        }
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! __lenso_native_lower_trait_object_access_control_admin {
+    ($object:ty, $plugin:ty, $support:path) => {
+        use $support as __LensoNativeSupportAccessControlAdmin;
+        impl $crate::AccessControlAdminProvider for $object {
+        fn assign_role(&self, context: __LensoNativeSupportAccessControlAdmin::InvocationContext, request: $crate::AssignRoleRequest) -> __LensoNativeSupportAccessControlAdmin::NativeRequestFuture<$crate::AccessControlAdminAssignRole> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                <$plugin as $crate::AccessControlAdminProvider>::assign_role(plugin.as_ref(), context, request).await
+            })
+        }
+        fn bootstrap_scope(&self, context: __LensoNativeSupportAccessControlAdmin::InvocationContext, request: $crate::BootstrapScopeRequest) -> __LensoNativeSupportAccessControlAdmin::NativeRequestFuture<$crate::AccessControlAdminBootstrapScope> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                <$plugin as $crate::AccessControlAdminProvider>::bootstrap_scope(plugin.as_ref(), context, request).await
+            })
+        }
+        fn create_role(&self, context: __LensoNativeSupportAccessControlAdmin::InvocationContext, request: $crate::CreateRoleRequest) -> __LensoNativeSupportAccessControlAdmin::NativeRequestFuture<$crate::AccessControlAdminCreateRole> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                <$plugin as $crate::AccessControlAdminProvider>::create_role(plugin.as_ref(), context, request).await
+            })
+        }
+        fn delete_role(&self, context: __LensoNativeSupportAccessControlAdmin::InvocationContext, request: $crate::DeleteRoleRequest) -> __LensoNativeSupportAccessControlAdmin::NativeRequestFuture<$crate::AccessControlAdminDeleteRole> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                <$plugin as $crate::AccessControlAdminProvider>::delete_role(plugin.as_ref(), context, request).await
+            })
+        }
+        fn revoke_role(&self, context: __LensoNativeSupportAccessControlAdmin::InvocationContext, request: $crate::RevokeRoleRequest) -> __LensoNativeSupportAccessControlAdmin::NativeRequestFuture<$crate::AccessControlAdminRevokeRole> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                <$plugin as $crate::AccessControlAdminProvider>::revoke_role(plugin.as_ref(), context, request).await
+            })
+        }
+        fn set_role_permissions(&self, context: __LensoNativeSupportAccessControlAdmin::InvocationContext, request: $crate::SetRolePermissionsRequest) -> __LensoNativeSupportAccessControlAdmin::NativeRequestFuture<$crate::AccessControlAdminSetRolePermissions> {
+            let object = self.clone();
+            ::std::boxed::Box::pin(async move {
+                let plugin = object.get()?;
+                <$plugin as $crate::AccessControlAdminProvider>::set_role_permissions(plugin.as_ref(), context, request).await
+            })
+        }
+        }
+    };
+}
+
 #[derive(Debug)]
 struct AccessControlAdminRequestEndpoint { provider: Rc<dyn AccessControlAdminProvider> }
 
@@ -1212,7 +1337,7 @@ macro_rules! __lenso_native_provide_access_control_admin {
     }};
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct AccessControlAdminClient {
     assign_role: NativeRequestHandle<AccessControlAdminAssignRole>,
     bootstrap_scope: NativeRequestHandle<AccessControlAdminBootstrapScope>,
@@ -1224,6 +1349,13 @@ pub struct AccessControlAdminClient {
 impl AccessControlAdminClient {
     pub fn from_dependencies(dependencies: &PluginDependencies) -> Result<Self, RuntimeFailure> {
         <Self as CapabilityClient>::from_dependencies(dependencies)
+    }
+
+    pub fn from_requirement(
+        dependencies: &PluginDependencies,
+        requirement_id: &str,
+    ) -> Result<Self, RuntimeFailure> {
+        <Self as CapabilityClient>::from_requirement(dependencies, requirement_id)
     }
 
     pub async fn assign_role(&self, request: AssignRoleRequest) -> Result<AssignRoleResponse, AccessControlAdminAssignRoleInvocationError> {
@@ -1317,6 +1449,14 @@ impl CapabilityClient for AccessControlAdminClient {
         })
     }
 
+    fn from_requirement(
+        dependencies: &PluginDependencies,
+        requirement_id: &str,
+    ) -> Result<Self, RuntimeFailure> {
+        let dependencies = dependencies.requirement(requirement_id)?;
+        Self::from_dependencies(&dependencies)
+    }
+
     fn already_connected() -> RuntimeFailure {
         RuntimeFailure::PluginFailure {
             detail: format!("Capability Port {CAPABILITY_ID} was connected more than once"),
@@ -1346,6 +1486,14 @@ impl CapabilityClientMany for AccessControlAdminClient {
                 ))
             })
             .collect()
+    }
+
+    fn many_from_requirement(
+        dependencies: &PluginDependencies,
+        requirement_id: &str,
+    ) -> Result<Vec<BoundCapabilityClient<Self>>, RuntimeFailure> {
+        let dependencies = dependencies.requirement(requirement_id)?;
+        Self::many_from_dependencies(&dependencies)
     }
 }
 

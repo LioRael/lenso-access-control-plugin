@@ -36,8 +36,11 @@ jobs:
       - run: cargo fmt --all -- --check
       - name: Check generated contracts
         run: |
-          cargo install --locked --version '=0.6.5' lenso-contract-codegen
+          cargo install --locked --version '=0.9.0' lenso-contract-codegen
           lenso-contract-codegen workspace check --manifest-path Cargo.toml
       - run: cargo check --locked --workspace --all-targets
       - run: cargo test --locked --workspace --features postgres-acceptance
       - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+
+      - name: Verify the coordinated package release
+        run: cargo package --locked -p lenso-capability-access-control -p lenso-capability-access-control-admin -p lenso-capability-access-control-directory -p lenso-access-control-postgres-plugin
