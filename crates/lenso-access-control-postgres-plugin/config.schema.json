@@ -12,24 +12,20 @@
   ],
   "properties": {
     "schema": {
-      "type": "string",
-      "pattern": "^[a-z][a-z0-9_]{0,62}$"
+      "type": "string"
     },
     "database_url_secret": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 256,
-      "pattern": "^[A-Za-z0-9._:-]+(?:/[A-Za-z0-9._:-]+)*$"
+      "maxLength": 256
     },
     "auth_issuer": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 256,
-      "pattern": "^[A-Za-z0-9._:-]+$"
+      "maxLength": 256
     },
     "auth_assertion_public_key": {
-      "type": "string",
-      "pattern": "^[A-Za-z0-9_-]{43}$"
+      "type": "string"
     },
     "bootstrap_callers": {
       "type": "array",
@@ -39,8 +35,7 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "maxLength": 256,
-        "pattern": "^[A-Za-z0-9._:-]+(?:/[A-Za-z0-9._:-]+)?$"
+        "maxLength": 256
       }
     },
     "directory_callers": {
@@ -51,8 +46,7 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "maxLength": 256,
-        "pattern": "^[A-Za-z0-9._:-]+(?:/[A-Za-z0-9._:-]+)?$"
+        "maxLength": 256
       }
     }
   }
