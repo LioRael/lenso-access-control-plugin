@@ -124,7 +124,7 @@ impl AccessControlConfig {
             || self
                 .bootstrap_callers
                 .iter()
-                .any(|caller| !valid_identifier(caller, 256))
+                .any(|caller| !valid_caller(caller))
         {
             return Err(AccessControlConfigError::InvalidBootstrapCallers);
         }
@@ -137,7 +137,7 @@ impl AccessControlConfig {
             || self
                 .directory_callers
                 .iter()
-                .any(|caller| !valid_identifier(caller, 256))
+                .any(|caller| !valid_caller(caller))
         {
             return Err(AccessControlConfigError::InvalidDirectoryCallers);
         }
@@ -1138,5 +1138,31 @@ mod tests {
         .expect("scope owner does not require Access Control when RBAC is removed");
         assert_eq!(remaining.plugin_instances().len(), 1);
         assert!(remaining.capability_bindings().is_empty());
+    }
+}
+
+// Preserve exact legacy keys while admitting canonical Plugin Root instance keys.
+fn valid_caller(value: &str) -> bool {
+    value.len() <= 256
+        && value.split('/').count() <= 2
+        && value
+            .split('/')
+            .all(|part| !matches!(part, "." | "..") && valid_identifier(part, 256))
+}
+
+#[test]
+fn caller_configuration_accepts_exact_plugin_root_keys_without_patterns() {
+    assert!(valid_caller("legacy-caller"));
+    assert!(valid_caller("lenso.projects.web/default"));
+    for invalid in [
+        "",
+        "/default",
+        "plugin/",
+        "plugin/a/b",
+        "plugin/*",
+        "plugin/..",
+        "plugin/ default",
+    ] {
+        assert!(!valid_caller(invalid), "unexpected caller {invalid}");
     }
 }
