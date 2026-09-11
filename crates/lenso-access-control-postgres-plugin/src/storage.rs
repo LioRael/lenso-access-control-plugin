@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use lenso_postgres_kit::OwnedPostgres;
-use sqlx::{Postgres, Row, Transaction};
+use lenso_postgres_kit::sqlx::{Postgres, Row, Transaction};
 use thiserror::Error;
 
 use crate::{BINDINGS_MANAGE_PERMISSION, BOOTSTRAP_ROLE_ID, ROLES_MANAGE_PERMISSION};
@@ -62,7 +62,7 @@ pub(crate) enum StorageError {
     Database {
         operation: &'static str,
         #[source]
-        source: sqlx::Error,
+        source: lenso_postgres_kit::sqlx::Error,
     },
     #[error("stored Access Control revision is negative")]
     InvalidRevision,
@@ -76,7 +76,7 @@ pub(crate) async fn check_permission(
     subject: &str,
     permission: &str,
 ) -> Result<Decision, StorageError> {
-    let row = sqlx::query(
+    let row = lenso_postgres_kit::sqlx::query(
         "SELECT s.policy_revision, EXISTS(SELECT 1 FROM access_control_subject_roles b JOIN access_control_role_permissions p ON p.scope_kind=b.scope_kind AND p.scope_id=b.scope_id AND p.role_id=b.role_id WHERE b.scope_kind=s.scope_kind AND b.scope_id=s.scope_id AND b.subject=$3 AND p.permission=$4) AS allowed FROM access_control_scopes s WHERE s.scope_kind=$1 AND s.scope_id=$2",
     )
     .bind(&scope.kind)
@@ -112,7 +112,7 @@ pub(crate) async fn get_role(
     scope: &ScopeKey,
     role_id: &str,
 ) -> Result<Result<(DirectoryRole, i64), DomainFailure>, StorageError> {
-    let row = sqlx::query(
+    let row = lenso_postgres_kit::sqlx::query(
         "SELECT s.policy_revision,r.role_id,r.name,r.protected,COALESCE(array_agg(p.permission ORDER BY p.permission) FILTER (WHERE p.permission IS NOT NULL),ARRAY[]::text[]) AS permissions FROM access_control_scopes s LEFT JOIN access_control_roles r ON r.scope_kind=s.scope_kind AND r.scope_id=s.scope_id AND r.role_id=$3 LEFT JOIN access_control_role_permissions p ON p.scope_kind=r.scope_kind AND p.scope_id=r.scope_id AND p.role_id=r.role_id WHERE s.scope_kind=$1 AND s.scope_id=$2 GROUP BY s.policy_revision,r.role_id,r.name,r.protected",
     )
     .bind(&scope.kind)
@@ -166,11 +166,11 @@ async fn list_directory_roles(
         .begin()
         .await
         .map_err(|source| database("begin directory page", source))?;
-    sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
+    lenso_postgres_kit::sqlx::query("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY")
         .execute(&mut *transaction)
         .await
         .map_err(|source| database("set directory snapshot", source))?;
-    let policy_revision: Option<i64> = sqlx::query_scalar(
+    let policy_revision: Option<i64> = lenso_postgres_kit::sqlx::query_scalar(
         "SELECT policy_revision FROM access_control_scopes WHERE scope_kind=$1 AND scope_id=$2",
     )
     .bind(&scope.kind)
@@ -186,7 +186,7 @@ async fn list_directory_roles(
     }
     let row_limit = i64::try_from(limit.saturating_add(1)).expect("directory page limit fits i64");
     let rows = if let Some(subject) = subject {
-        sqlx::query(
+        lenso_postgres_kit::sqlx::query(
             "SELECT r.role_id,r.name,r.protected,COALESCE(array_agg(p.permission ORDER BY p.permission) FILTER (WHERE p.permission IS NOT NULL),ARRAY[]::text[]) AS permissions FROM access_control_subject_roles b JOIN access_control_roles r ON r.scope_kind=b.scope_kind AND r.scope_id=b.scope_id AND r.role_id=b.role_id LEFT JOIN access_control_role_permissions p ON p.scope_kind=r.scope_kind AND p.scope_id=r.scope_id AND p.role_id=r.role_id WHERE b.scope_kind=$1 AND b.scope_id=$2 AND b.subject=$3 AND ($4::text IS NULL OR r.role_id>$4) GROUP BY r.role_id,r.name,r.protected ORDER BY r.role_id LIMIT $5",
         )
         .bind(&scope.kind)
@@ -198,7 +198,7 @@ async fn list_directory_roles(
         .await
         .map_err(|source| database("list subject directory roles", source))?
     } else {
-        sqlx::query(
+        lenso_postgres_kit::sqlx::query(
             "SELECT r.role_id,r.name,r.protected,COALESCE(array_agg(p.permission ORDER BY p.permission) FILTER (WHERE p.permission IS NOT NULL),ARRAY[]::text[]) AS permissions FROM access_control_roles r LEFT JOIN access_control_role_permissions p ON p.scope_kind=r.scope_kind AND p.scope_id=r.scope_id AND p.role_id=r.role_id WHERE r.scope_kind=$1 AND r.scope_id=$2 AND ($3::text IS NULL OR r.role_id>$3) GROUP BY r.role_id,r.name,r.protected ORDER BY r.role_id LIMIT $4",
         )
         .bind(&scope.kind)
@@ -223,7 +223,9 @@ async fn list_directory_roles(
     }))
 }
 
-fn decode_directory_role(row: &sqlx::postgres::PgRow) -> Result<DirectoryRole, StorageError> {
+fn decode_directory_role(
+    row: &lenso_postgres_kit::sqlx::postgres::PgRow,
+) -> Result<DirectoryRole, StorageError> {
     Ok(DirectoryRole {
         role_id: row
             .try_get("role_id")
@@ -250,7 +252,7 @@ pub(crate) async fn bootstrap_scope(
         .begin()
         .await
         .map_err(|source| database("begin bootstrap", source))?;
-    let inserted = sqlx::query(
+    let inserted = lenso_postgres_kit::sqlx::query(
         "INSERT INTO access_control_scopes(scope_kind,scope_id,bootstrap_subject) VALUES($1,$2,$3) ON CONFLICT DO NOTHING RETURNING policy_revision",
     )
     .bind(&scope.kind)
@@ -261,7 +263,7 @@ pub(crate) async fn bootstrap_scope(
     .map_err(|source| database("create scope policy", source))?;
 
     if inserted.is_none() {
-        let row = sqlx::query(
+        let row = lenso_postgres_kit::sqlx::query(
             "SELECT bootstrap_subject, policy_revision FROM access_control_scopes WHERE scope_kind=$1 AND scope_id=$2 FOR UPDATE",
         )
         .bind(&scope.kind)
@@ -287,7 +289,7 @@ pub(crate) async fn bootstrap_scope(
         }));
     }
 
-    sqlx::query(
+    lenso_postgres_kit::sqlx::query(
         "INSERT INTO access_control_roles(scope_kind,scope_id,role_id,name,protected) VALUES($1,$2,$3,'Bootstrap administrator',TRUE)",
     )
     .bind(&scope.kind)
@@ -297,7 +299,7 @@ pub(crate) async fn bootstrap_scope(
     .await
     .map_err(|source| database("create bootstrap role", source))?;
     for permission in [ROLES_MANAGE_PERMISSION, BINDINGS_MANAGE_PERMISSION] {
-        sqlx::query(
+        lenso_postgres_kit::sqlx::query(
             "INSERT INTO access_control_role_permissions(scope_kind,scope_id,role_id,permission) VALUES($1,$2,$3,$4)",
         )
         .bind(&scope.kind)
@@ -308,7 +310,7 @@ pub(crate) async fn bootstrap_scope(
         .await
         .map_err(|source| database("grant bootstrap permission", source))?;
     }
-    sqlx::query(
+    lenso_postgres_kit::sqlx::query(
         "INSERT INTO access_control_subject_roles(scope_kind,scope_id,subject,role_id) VALUES($1,$2,$3,$4)",
     )
     .bind(&scope.kind)
@@ -340,7 +342,7 @@ pub(crate) async fn create_role(
     let Some((mut transaction, _current_revision)) = authorized.take() else {
         return Ok(Err(authorized.failure));
     };
-    let inserted = sqlx::query(
+    let inserted = lenso_postgres_kit::sqlx::query(
         "INSERT INTO access_control_roles(scope_kind,scope_id,role_id,name,protected) VALUES($1,$2,$3,$4,FALSE) ON CONFLICT DO NOTHING RETURNING role_id",
     )
     .bind(&scope.kind)
@@ -377,7 +379,7 @@ pub(crate) async fn set_role_permissions(
         Some(true) => return Ok(Err(DomainFailure::ProtectedRole)),
         Some(false) => {}
     }
-    let rows = sqlx::query(
+    let rows = lenso_postgres_kit::sqlx::query(
         "SELECT permission FROM access_control_role_permissions WHERE scope_kind=$1 AND scope_id=$2 AND role_id=$3 ORDER BY permission",
     )
     .bind(&scope.kind)
@@ -400,7 +402,7 @@ pub(crate) async fn set_role_permissions(
             revision: current_revision,
         }));
     }
-    sqlx::query(
+    lenso_postgres_kit::sqlx::query(
         "DELETE FROM access_control_role_permissions WHERE scope_kind=$1 AND scope_id=$2 AND role_id=$3",
     )
     .bind(&scope.kind)
@@ -410,7 +412,7 @@ pub(crate) async fn set_role_permissions(
     .await
     .map_err(|source| database("replace role permissions", source))?;
     for permission in permissions {
-        sqlx::query(
+        lenso_postgres_kit::sqlx::query(
             "INSERT INTO access_control_role_permissions(scope_kind,scope_id,role_id,permission) VALUES($1,$2,$3,$4)",
         )
         .bind(&scope.kind)
@@ -444,7 +446,7 @@ pub(crate) async fn delete_role(
         Some(true) => return Ok(Err(DomainFailure::ProtectedRole)),
         Some(false) => {}
     }
-    sqlx::query(
+    lenso_postgres_kit::sqlx::query(
         "DELETE FROM access_control_roles WHERE scope_kind=$1 AND scope_id=$2 AND role_id=$3",
     )
     .bind(&scope.kind)
@@ -479,7 +481,7 @@ pub(crate) async fn assign_role(
     {
         return Ok(Err(DomainFailure::RoleNotFound));
     }
-    let changed = sqlx::query(
+    let changed = lenso_postgres_kit::sqlx::query(
         "INSERT INTO access_control_subject_roles(scope_kind,scope_id,subject,role_id) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING",
     )
     .bind(&scope.kind)
@@ -515,7 +517,7 @@ pub(crate) async fn revoke_role(
     let Some(protected) = role_protection(&mut transaction, scope, role_id).await? else {
         return Ok(Err(DomainFailure::RoleNotFound));
     };
-    let exists: bool = sqlx::query_scalar(
+    let exists: bool = lenso_postgres_kit::sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM access_control_subject_roles WHERE scope_kind=$1 AND scope_id=$2 AND subject=$3 AND role_id=$4)",
     )
     .bind(&scope.kind)
@@ -533,7 +535,7 @@ pub(crate) async fn revoke_role(
         }));
     }
     if protected {
-        let binding_count: i64 = sqlx::query_scalar(
+        let binding_count: i64 = lenso_postgres_kit::sqlx::query_scalar(
             "SELECT count(*) FROM access_control_subject_roles WHERE scope_kind=$1 AND scope_id=$2 AND role_id=$3",
         )
         .bind(&scope.kind)
@@ -546,7 +548,7 @@ pub(crate) async fn revoke_role(
             return Ok(Err(DomainFailure::ProtectedBinding));
         }
     }
-    sqlx::query(
+    lenso_postgres_kit::sqlx::query(
         "DELETE FROM access_control_subject_roles WHERE scope_kind=$1 AND scope_id=$2 AND subject=$3 AND role_id=$4",
     )
     .bind(&scope.kind)
@@ -586,7 +588,7 @@ async fn begin_authorized<'a>(
         .begin()
         .await
         .map_err(|source| database("begin administration", source))?;
-    let row = sqlx::query(
+    let row = lenso_postgres_kit::sqlx::query(
         "SELECT policy_revision FROM access_control_scopes WHERE scope_kind=$1 AND scope_id=$2 FOR UPDATE",
     )
     .bind(&scope.kind)
@@ -601,7 +603,7 @@ async fn begin_authorized<'a>(
         });
     };
     let revision = revision(&row)?;
-    let allowed: bool = sqlx::query_scalar(
+    let allowed: bool = lenso_postgres_kit::sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM access_control_subject_roles b JOIN access_control_role_permissions p ON p.scope_kind=b.scope_kind AND p.scope_id=b.scope_id AND p.role_id=b.role_id WHERE b.scope_kind=$1 AND b.scope_id=$2 AND b.subject=$3 AND p.permission=$4)",
     )
     .bind(&scope.kind)
@@ -628,7 +630,7 @@ async fn role_protection(
     scope: &ScopeKey,
     role_id: &str,
 ) -> Result<Option<bool>, StorageError> {
-    sqlx::query_scalar(
+    lenso_postgres_kit::sqlx::query_scalar(
         "SELECT protected FROM access_control_roles WHERE scope_kind=$1 AND scope_id=$2 AND role_id=$3",
     )
     .bind(&scope.kind)
@@ -643,7 +645,7 @@ async fn bump_revision(
     transaction: &mut Transaction<'_, Postgres>,
     scope: &ScopeKey,
 ) -> Result<i64, StorageError> {
-    let row = sqlx::query(
+    let row = lenso_postgres_kit::sqlx::query(
         "UPDATE access_control_scopes SET policy_revision=policy_revision+1,updated_at=transaction_timestamp() WHERE scope_kind=$1 AND scope_id=$2 RETURNING policy_revision",
     )
     .bind(&scope.kind)
@@ -658,7 +660,7 @@ async fn verify_bootstrap_policy(
     transaction: &mut Transaction<'_, Postgres>,
     scope: &ScopeKey,
 ) -> Result<(), StorageError> {
-    let complete: bool = sqlx::query_scalar(
+    let complete: bool = lenso_postgres_kit::sqlx::query_scalar(
         "SELECT EXISTS(SELECT 1 FROM access_control_roles r JOIN access_control_subject_roles b ON b.scope_kind=r.scope_kind AND b.scope_id=r.scope_id AND b.role_id=r.role_id WHERE r.scope_kind=$1 AND r.scope_id=$2 AND r.role_id=$3 AND r.protected) AND (SELECT count(*) FROM access_control_role_permissions WHERE scope_kind=$1 AND scope_id=$2 AND role_id=$3 AND permission IN ($4,$5))=2",
     )
     .bind(&scope.kind)
@@ -676,7 +678,7 @@ async fn verify_bootstrap_policy(
     }
 }
 
-fn revision(row: &sqlx::postgres::PgRow) -> Result<i64, StorageError> {
+fn revision(row: &lenso_postgres_kit::sqlx::postgres::PgRow) -> Result<i64, StorageError> {
     let revision = row
         .try_get("policy_revision")
         .map_err(|source| database("decode policy revision", source))?;
@@ -697,6 +699,6 @@ async fn commit(
         .map_err(|source| database(operation, source))
 }
 
-fn database(operation: &'static str, source: sqlx::Error) -> StorageError {
+fn database(operation: &'static str, source: lenso_postgres_kit::sqlx::Error) -> StorageError {
     StorageError::Database { operation, source }
 }

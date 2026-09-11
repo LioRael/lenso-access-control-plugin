@@ -1,7 +1,7 @@
 use std::collections::BTreeSet;
 
 use lenso_postgres_kit::OwnedPostgres;
-use sqlx::{AssertSqlSafe, Connection};
+use lenso_postgres_kit::sqlx::{AssertSqlSafe, Connection};
 use url::Url;
 
 use super::{
@@ -27,9 +27,11 @@ async fn durable_policy_preserves_union_revision_and_bootstrap_protection() {
     );
 
     let schema_name = format!("access_control_acceptance_{}", std::process::id());
-    let mut cleanup = sqlx::PgConnection::connect(&database_url).await.unwrap();
+    let mut cleanup = lenso_postgres_kit::sqlx::PgConnection::connect(&database_url)
+        .await
+        .unwrap();
     let drop_schema = format!("DROP SCHEMA IF EXISTS {schema_name} CASCADE");
-    sqlx::query(AssertSqlSafe(drop_schema.as_str()))
+    lenso_postgres_kit::sqlx::query(AssertSqlSafe(drop_schema.as_str()))
         .execute(&mut cleanup)
         .await
         .unwrap();
@@ -243,7 +245,7 @@ async fn durable_policy_preserves_union_revision_and_bootstrap_protection() {
     assert_eq!(repeated_after_transfer.revision, 9);
 
     postgres.pool().close().await;
-    sqlx::query(AssertSqlSafe(
+    lenso_postgres_kit::sqlx::query(AssertSqlSafe(
         format!("DROP SCHEMA {schema_name} CASCADE").as_str(),
     ))
     .execute(&mut cleanup)
