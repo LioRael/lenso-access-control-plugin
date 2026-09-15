@@ -23,8 +23,11 @@ to have been authored by release-plz. The dry-run uses the same selection policy
 
 
 Publish shared Capabilities before `lenso-access-control-core`, then publish the
-backend Plugins that depend on it. The new core and D1 crates require their own
-crates.io Trusted Publisher setup before their first release. Local qualification
+backend Plugins that depend on it. crates.io requires the first Core and D1 upload to use an existing API token;
+Trusted Publishing can only be configured after the crate exists. Bootstrap
+those exact versions from the merged commit using the normal Cargo credential
+provider, then configure this repository/workflow as their Trusted Publisher.
+Subsequent publications use the confirmed OIDC workflow. Local qualification
 does not claim these new packages are already available in the registry.
 
 
