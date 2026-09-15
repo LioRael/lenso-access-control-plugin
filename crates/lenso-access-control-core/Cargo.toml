@@ -1,0 +1,30 @@
+[package]
+name = "lenso-access-control-core"
+version = "0.1.0"
+description = "Shared Access Control policy and storage contract for Lenso backends."
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+lenso.workspace = true
+lenso-auth-sdk.workspace = true
+lenso-kernel.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+time.workspace = true
+lenso-capability-access-control = { version = "0.2.0", path = "../lenso-capability-access-control" }
+lenso-capability-access-control-admin = { version = "0.2.0", path = "../lenso-capability-access-control-admin" }
+lenso-capability-access-control-directory = { version = "0.2.0", path = "../lenso-capability-access-control-directory" }
+
+[lints]
+workspace = true
+
+[features]
+conformance = []
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+time = { workspace = true, features = ["wasm-bindgen"] }

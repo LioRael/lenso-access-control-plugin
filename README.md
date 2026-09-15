@@ -108,3 +108,10 @@ operation schemas, authorization rules and database migrations are unchanged.
 Older package versions remain available for Kernel 0.2 applications. Update the
 participating native providers together instead of mixing both Kernel families in
 one linked App. No Git or local path override is needed by published consumers.
+
+## Cloudflare Workers
+
+The `lenso.access-control.d1` Plugin implements the same RBAC Capabilities using
+an explicitly supplied, event-owned D1 binding. PostgreSQL and D1 share request
+validation and authorization policy while retaining distinct resource
+configuration. See [Workers setup and qualification](docs/workers.md).

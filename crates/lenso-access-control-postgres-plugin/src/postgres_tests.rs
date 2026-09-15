@@ -42,6 +42,11 @@ async fn durable_policy_preserves_union_revision_and_bootstrap_protection() {
     )
     .await
     .unwrap();
+    lenso_access_control_core::conformance::exercise(
+        &storage::PostgresStore(Some(postgres.clone())),
+        "shared-vectors",
+    )
+    .await;
     let scope = ScopeKey {
         kind: "organization".to_owned(),
         id: "org_42".to_owned(),

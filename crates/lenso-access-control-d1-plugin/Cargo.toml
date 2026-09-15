@@ -1,0 +1,47 @@
+[package]
+name = "lenso-access-control-d1-plugin"
+version = "0.1.0"
+description = "D1-backed independent RBAC Plugin for Lenso Workers applications."
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[package.metadata.lenso]
+plugin-id = "lenso.access-control.d1"
+root-slot = "access-control"
+
+[dependencies]
+lenso-access-control-core = { version = "0.1.0", path = "../lenso-access-control-core" }
+lenso-native-adapter.workspace = true
+lenso-migration = "0.1.0"
+lenso-migration-d1 = "0.1.0"
+futures.workspace = true
+
+lenso.workspace = true
+lenso-auth-sdk.workspace = true
+lenso-kernel.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+time.workspace = true
+lenso-capability-access-control = { version = "0.2.0", path = "../lenso-capability-access-control" }
+lenso-capability-access-control-admin = { version = "0.2.0", path = "../lenso-capability-access-control-admin" }
+lenso-capability-access-control-directory = { version = "0.2.0", path = "../lenso-capability-access-control-directory" }
+
+[lints]
+workspace = true
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+js-sys = "=0.3.104"
+wasm-bindgen = "=0.2.127"
+wasm-bindgen-futures = "=0.4.77"
+
+[dev-dependencies]
+rusqlite = { version = "0.38", features = ["bundled"] }
+
+[dev-dependencies.lenso-access-control-core]
+version = "0.1.0"
+path = "../lenso-access-control-core"
+features = ["conformance"]

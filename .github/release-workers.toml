@@ -1,0 +1,18 @@
+# Manual Workers cohort publication; other repository packages remain untouched.
+[workspace]
+release = false
+release_always = true
+changelog_update = false
+git_tag_name = "{{ package }}@{{ version }}"
+
+[[package]]
+name = "lenso-access-control-core"
+release = true
+
+[[package]]
+name = "lenso-access-control-d1-plugin"
+release = true
+
+[[package]]
+name = "lenso-access-control-postgres-plugin"
+release = true

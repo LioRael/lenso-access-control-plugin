@@ -33,6 +33,7 @@ jobs:
           components: rustfmt,clippy
       - uses: Swatinem/rust-cache@v2
       - run: ./scripts/check-repository-boundary.sh
+      - run: python3 scripts/generate-d1-migrations.py --check
       - run: cargo fmt --all -- --check
       - name: Check generated contracts
         run: |
@@ -43,4 +44,27 @@ jobs:
       - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
 
       - name: Verify the coordinated package release
-        run: cargo package --locked -p lenso-capability-access-control -p lenso-capability-access-control-admin -p lenso-capability-access-control-directory -p lenso-access-control-postgres-plugin
+        run: cargo package --locked -p lenso-capability-access-control -p lenso-capability-access-control-admin -p lenso-capability-access-control-directory -p lenso-access-control-core -p lenso-access-control-postgres-plugin -p lenso-access-control-d1-plugin
+
+  workers:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: 1.94.0
+          targets: wasm32-unknown-unknown
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.5.0
+      - run: pnpm --dir workers install --frozen-lockfile
+      - run: cargo clippy --locked -p lenso-access-control-d1-plugin -p lenso-access-control-workers-smoke --target wasm32-unknown-unknown -- -D warnings
+      - run: cargo package --locked --target wasm32-unknown-unknown -p lenso-capability-access-control -p lenso-capability-access-control-admin -p lenso-capability-access-control-directory -p lenso-access-control-core -p lenso-access-control-d1-plugin
+      - run: cargo install --locked --version '=0.2.127' wasm-bindgen-cli
+      - run: bash workers/build.sh
+      - run: node workers/proof.mjs

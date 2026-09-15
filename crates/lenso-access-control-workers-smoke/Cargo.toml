@@ -1,0 +1,24 @@
+[package]
+name = "lenso-access-control-workers-smoke"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish = false
+[lib]
+crate-type = ["cdylib"]
+[dependencies]
+lenso-access-control-d1-plugin = { path = "../lenso-access-control-d1-plugin" }
+lenso-access-control-core = { path = "../lenso-access-control-core", features = ["conformance"] }
+lenso-capability-access-control = { path = "../lenso-capability-access-control" }
+lenso-capability-access-control-admin = { path = "../lenso-capability-access-control-admin" }
+lenso-capability-access-control-directory = { path = "../lenso-capability-access-control-directory" }
+lenso-kernel.workspace = true
+lenso-app-plan.workspace = true
+lenso-auth-sdk.workspace = true
+lenso-native-adapter.workspace = true
+lenso-workers-driver = "0.1.0"
+wasm-bindgen = "=0.2.127"
+wasm-bindgen-futures = "=0.4.77"
+js-sys = "=0.3.104"
+serde_json.workspace = true
+time.workspace = true

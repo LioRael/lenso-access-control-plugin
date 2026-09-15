@@ -1,2 +1,8 @@
 /target/
 .env
+
+/workers/node_modules/
+/workers/pkg/
+/workers/proof.bundle.mjs
+/workers/.wrangler/
+/.wrangler/
