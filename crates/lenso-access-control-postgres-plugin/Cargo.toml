@@ -21,9 +21,9 @@ lenso-access-control-core = { version = "0.1.0", path = "../lenso-access-control
 futures.workspace = true
 lenso.workspace = true
 lenso-auth-sdk.workspace = true
-lenso-capability-access-control = { version = "0.2.0", path = "../lenso-capability-access-control" }
-lenso-capability-access-control-admin = { version = "0.2.0", path = "../lenso-capability-access-control-admin" }
-lenso-capability-access-control-directory = { version = "0.2.0", path = "../lenso-capability-access-control-directory" }
+lenso-capability-access-control = { version = "0.2.1", path = "../lenso-capability-access-control" }
+lenso-capability-access-control-admin = { version = "0.2.1", path = "../lenso-capability-access-control-admin" }
+lenso-capability-access-control-directory = { version = "0.2.1", path = "../lenso-capability-access-control-directory" }
 lenso-capability-secrets.workspace = true
 lenso-kernel.workspace = true
 lenso-native-adapter.workspace = true

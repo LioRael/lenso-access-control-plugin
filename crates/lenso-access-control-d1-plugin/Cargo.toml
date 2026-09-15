@@ -26,9 +26,9 @@ serde.workspace = true
 serde_json.workspace = true
 thiserror.workspace = true
 time.workspace = true
-lenso-capability-access-control = { version = "0.2.0", path = "../lenso-capability-access-control" }
-lenso-capability-access-control-admin = { version = "0.2.0", path = "../lenso-capability-access-control-admin" }
-lenso-capability-access-control-directory = { version = "0.2.0", path = "../lenso-capability-access-control-directory" }
+lenso-capability-access-control = { version = "0.2.1", path = "../lenso-capability-access-control" }
+lenso-capability-access-control-admin = { version = "0.2.1", path = "../lenso-capability-access-control-admin" }
+lenso-capability-access-control-directory = { version = "0.2.1", path = "../lenso-capability-access-control-directory" }
 
 [lints]
 workspace = true
