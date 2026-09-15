@@ -1,6 +1,6 @@
 [package]
 name = "lenso-access-control-postgres-plugin"
-version = "0.2.0"
+version = "0.2.1"
 description = "PostgreSQL-backed independent RBAC Plugin for Lenso applications."
 edition.workspace = true
 license.workspace = true
@@ -17,6 +17,7 @@ default = []
 postgres-acceptance = []
 
 [dependencies]
+lenso-access-control-core = { version = "0.1.0", path = "../lenso-access-control-core" }
 futures.workspace = true
 lenso.workspace = true
 lenso-auth-sdk.workspace = true
@@ -41,3 +42,8 @@ url = "2.5"
 
 [lints]
 workspace = true
+
+[dev-dependencies.lenso-access-control-core]
+version = "0.1.0"
+path = "../lenso-access-control-core"
+features = ["conformance"]

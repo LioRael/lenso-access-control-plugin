@@ -1,0 +1,14 @@
+{
+  "name": "lenso-access-control-workers-qualification",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node proof.mjs"
+  },
+  "dependencies": {
+    "@lenso/workers-runtime": "0.1.2"
+  },
+  "devDependencies": {
+    "wrangler": "4.107.0"
+  }
+}

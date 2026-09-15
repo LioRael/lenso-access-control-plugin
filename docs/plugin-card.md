@@ -40,3 +40,13 @@ a vNext Audit Capability. Role inheritance, explicit deny, direct grants,
 conditional policy, relationship traversal, and a Console UI surface are
 outside v1. Agent Tools are supplied by a separate private adapter and never
 bootstrap a scope.
+
+## D1 implementation
+
+`lenso.access-control.d1` owns the same RBAC facts and provides the same three
+Capabilities. Its explicit event binding replaces the PostgreSQL URL and Secrets
+requirement, so it is a distinct Plugin Contract. Both backends share policy
+logic through `lenso-access-control-core`; only persistence and lifecycle resource
+handling differ. D1 activation verifies operator-managed migrations, and shutdown
+invalidates the prepared service. See [Workers integration](workers.md) for the
+Host edge, atomic administration algorithm, and qualification commands.

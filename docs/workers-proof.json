@@ -1,0 +1,19 @@
+{
+  "passed": 56,
+  "runtime": "workerd",
+  "workers_runtime": "0.1.2",
+  "wasm_sha256": "0937ad74f20da36c704ae0c67e056d6981710ee26b2e4e5867648399a6992c3a",
+  "artifact_source": "local workspace build; unpublished",
+  "coverage": [
+    "Kernel startup and typed invocation",
+    "operation-audienced actor assertion",
+    "shared PostgreSQL/D1 contract vectors",
+    "missing schema and incorrect binding",
+    "closed event and malformed receipt",
+    "provider removal and clean shutdown",
+    "four concurrent independent events",
+    "six concurrent revocation races",
+    "four duplicate assignments per race",
+    "expired actor assertion rejected"
+  ]
+}

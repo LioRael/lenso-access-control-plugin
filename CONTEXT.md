@@ -26,3 +26,9 @@ Access Control.
 Every effective mutation increments that scope's policy revision once. The
 bootstrap administrator role cannot be deleted or have its grants replaced,
 and its final subject binding cannot be revoked.
+
+Workers use the separate `lenso.access-control.d1` provider with the same
+Capabilities and shared `lenso-access-control-core` business service. D1 performs
+current authorization, mutation, and one revision increment in a single primary
+atomic batch. Directory snapshots use one SQL statement. Both backends define
+bytewise ordering independent of database locale. See `docs/workers.md`.

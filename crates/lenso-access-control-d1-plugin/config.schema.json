@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Lenso Access Control D1 Plugin configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "auth_issuer",
+    "auth_assertion_public_key",
+    "bootstrap_callers",
+    "binding"
+  ],
+  "properties": {
+    "auth_issuer": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "auth_assertion_public_key": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "bootstrap_callers": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256,
+        "pattern": "^[A-Za-z0-9._:-]+$"
+      }
+    },
+    "directory_callers": {
+      "type": "array",
+      "maxItems": 64,
+      "uniqueItems": true,
+      "default": [],
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 256,
+        "pattern": "^[A-Za-z0-9._:-]+$"
+      }
+    },
+    "binding": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,127}$"
+    }
+  }
+}

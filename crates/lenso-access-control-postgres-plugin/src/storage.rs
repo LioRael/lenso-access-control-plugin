@@ -6,58 +6,12 @@ use thiserror::Error;
 
 use crate::{BINDINGS_MANAGE_PERMISSION, BOOTSTRAP_ROLE_ID, ROLES_MANAGE_PERMISSION};
 
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct ScopeKey {
-    pub(crate) kind: String,
-    pub(crate) id: String,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct Decision {
-    pub(crate) allowed: bool,
-    pub(crate) revision: i64,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct Mutation {
-    pub(crate) changed: bool,
-    pub(crate) revision: i64,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) struct Bootstrap {
-    pub(crate) created: bool,
-    pub(crate) revision: i64,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct DirectoryRole {
-    pub(crate) role_id: String,
-    pub(crate) name: String,
-    pub(crate) protected: bool,
-    pub(crate) permissions: Vec<String>,
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub(crate) struct DirectoryRolePage {
-    pub(crate) roles: Vec<DirectoryRole>,
-    pub(crate) revision: i64,
-    pub(crate) has_more: bool,
-}
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub(crate) enum DomainFailure {
-    Forbidden,
-    ScopeAlreadyBootstrapped,
-    ScopeNotBootstrapped,
-    RoleAlreadyExists,
-    RoleNotFound,
-    ProtectedRole,
-    ProtectedBinding,
-}
+pub(crate) use lenso_access_control_core::storage::*;
 
 #[derive(Debug, Error)]
 pub(crate) enum StorageError {
+    #[error("Access Control is not prepared")]
+    NotPrepared,
     #[error("PostgreSQL operation `{operation}` failed")]
     Database {
         operation: &'static str,
@@ -113,7 +67,7 @@ pub(crate) async fn get_role(
     role_id: &str,
 ) -> Result<Result<(DirectoryRole, i64), DomainFailure>, StorageError> {
     let row = sqlx::query(
-        "SELECT s.policy_revision,r.role_id,r.name,r.protected,COALESCE(array_agg(p.permission ORDER BY p.permission) FILTER (WHERE p.permission IS NOT NULL),ARRAY[]::text[]) AS permissions FROM access_control_scopes s LEFT JOIN access_control_roles r ON r.scope_kind=s.scope_kind AND r.scope_id=s.scope_id AND r.role_id=$3 LEFT JOIN access_control_role_permissions p ON p.scope_kind=r.scope_kind AND p.scope_id=r.scope_id AND p.role_id=r.role_id WHERE s.scope_kind=$1 AND s.scope_id=$2 GROUP BY s.policy_revision,r.role_id,r.name,r.protected",
+        "SELECT s.policy_revision,r.role_id,r.name,r.protected,COALESCE(array_agg(p.permission ORDER BY p.permission COLLATE \"C\") FILTER (WHERE p.permission IS NOT NULL),ARRAY[]::text[]) AS permissions FROM access_control_scopes s LEFT JOIN access_control_roles r ON r.scope_kind=s.scope_kind AND r.scope_id=s.scope_id AND r.role_id=$3 LEFT JOIN access_control_role_permissions p ON p.scope_kind=r.scope_kind AND p.scope_id=r.scope_id AND p.role_id=r.role_id WHERE s.scope_kind=$1 AND s.scope_id=$2 GROUP BY s.policy_revision,r.role_id,r.name,r.protected",
     )
     .bind(&scope.kind)
     .bind(&scope.id)
@@ -187,7 +141,7 @@ async fn list_directory_roles(
     let row_limit = i64::try_from(limit.saturating_add(1)).expect("directory page limit fits i64");
     let rows = if let Some(subject) = subject {
         sqlx::query(
-            "SELECT r.role_id,r.name,r.protected,COALESCE(array_agg(p.permission ORDER BY p.permission) FILTER (WHERE p.permission IS NOT NULL),ARRAY[]::text[]) AS permissions FROM access_control_subject_roles b JOIN access_control_roles r ON r.scope_kind=b.scope_kind AND r.scope_id=b.scope_id AND r.role_id=b.role_id LEFT JOIN access_control_role_permissions p ON p.scope_kind=r.scope_kind AND p.scope_id=r.scope_id AND p.role_id=r.role_id WHERE b.scope_kind=$1 AND b.scope_id=$2 AND b.subject=$3 AND ($4::text IS NULL OR r.role_id>$4) GROUP BY r.role_id,r.name,r.protected ORDER BY r.role_id LIMIT $5",
+            "SELECT r.role_id,r.name,r.protected,COALESCE(array_agg(p.permission ORDER BY p.permission COLLATE \"C\") FILTER (WHERE p.permission IS NOT NULL),ARRAY[]::text[]) AS permissions FROM access_control_subject_roles b JOIN access_control_roles r ON r.scope_kind=b.scope_kind AND r.scope_id=b.scope_id AND r.role_id=b.role_id LEFT JOIN access_control_role_permissions p ON p.scope_kind=r.scope_kind AND p.scope_id=r.scope_id AND p.role_id=r.role_id WHERE b.scope_kind=$1 AND b.scope_id=$2 AND b.subject=$3 AND ($4::text IS NULL OR r.role_id COLLATE \"C\">$4) GROUP BY r.role_id,r.name,r.protected ORDER BY r.role_id COLLATE \"C\" LIMIT $5",
         )
         .bind(&scope.kind)
         .bind(&scope.id)
@@ -199,7 +153,7 @@ async fn list_directory_roles(
         .map_err(|source| database("list subject directory roles", source))?
     } else {
         sqlx::query(
-            "SELECT r.role_id,r.name,r.protected,COALESCE(array_agg(p.permission ORDER BY p.permission) FILTER (WHERE p.permission IS NOT NULL),ARRAY[]::text[]) AS permissions FROM access_control_roles r LEFT JOIN access_control_role_permissions p ON p.scope_kind=r.scope_kind AND p.scope_id=r.scope_id AND p.role_id=r.role_id WHERE r.scope_kind=$1 AND r.scope_id=$2 AND ($3::text IS NULL OR r.role_id>$3) GROUP BY r.role_id,r.name,r.protected ORDER BY r.role_id LIMIT $4",
+            "SELECT r.role_id,r.name,r.protected,COALESCE(array_agg(p.permission ORDER BY p.permission COLLATE \"C\") FILTER (WHERE p.permission IS NOT NULL),ARRAY[]::text[]) AS permissions FROM access_control_roles r LEFT JOIN access_control_role_permissions p ON p.scope_kind=r.scope_kind AND p.scope_id=r.scope_id AND p.role_id=r.role_id WHERE r.scope_kind=$1 AND r.scope_id=$2 AND ($3::text IS NULL OR r.role_id COLLATE \"C\">$3) GROUP BY r.role_id,r.name,r.protected ORDER BY r.role_id COLLATE \"C\" LIMIT $4",
         )
         .bind(&scope.kind)
         .bind(&scope.id)
@@ -699,4 +653,156 @@ async fn commit(
 
 fn database(operation: &'static str, source: sqlx::Error) -> StorageError {
     StorageError::Database { operation, source }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct PostgresStore(pub Option<OwnedPostgres>);
+impl Store for PostgresStore {
+    type Error = StorageError;
+    async fn check_permission(
+        &self,
+        scope: &ScopeKey,
+        subject: &str,
+        permission: &str,
+    ) -> Result<Decision, Self::Error> {
+        check_permission(
+            self.0.as_ref().ok_or(StorageError::NotPrepared)?,
+            scope,
+            subject,
+            permission,
+        )
+        .await
+    }
+    async fn get_role(
+        &self,
+        scope: &ScopeKey,
+        role_id: &str,
+    ) -> Result<Result<(DirectoryRole, i64), DomainFailure>, Self::Error> {
+        get_role(
+            self.0.as_ref().ok_or(StorageError::NotPrepared)?,
+            scope,
+            role_id,
+        )
+        .await
+    }
+    async fn list_roles(
+        &self,
+        scope: &ScopeKey,
+        after_role_id: Option<&str>,
+        limit: usize,
+    ) -> Result<Result<DirectoryRolePage, DomainFailure>, Self::Error> {
+        list_roles(
+            self.0.as_ref().ok_or(StorageError::NotPrepared)?,
+            scope,
+            after_role_id,
+            limit,
+        )
+        .await
+    }
+    async fn list_subject_roles(
+        &self,
+        scope: &ScopeKey,
+        subject: &str,
+        after_role_id: Option<&str>,
+        limit: usize,
+    ) -> Result<Result<DirectoryRolePage, DomainFailure>, Self::Error> {
+        list_subject_roles(
+            self.0.as_ref().ok_or(StorageError::NotPrepared)?,
+            scope,
+            subject,
+            after_role_id,
+            limit,
+        )
+        .await
+    }
+    async fn bootstrap_scope(
+        &self,
+        scope: &ScopeKey,
+        subject: &str,
+    ) -> Result<Result<Bootstrap, DomainFailure>, Self::Error> {
+        bootstrap_scope(
+            self.0.as_ref().ok_or(StorageError::NotPrepared)?,
+            scope,
+            subject,
+        )
+        .await
+    }
+    async fn create_role(
+        &self,
+        scope: &ScopeKey,
+        actor: &str,
+        role_id: &str,
+        name: &str,
+    ) -> Result<Result<Mutation, DomainFailure>, Self::Error> {
+        create_role(
+            self.0.as_ref().ok_or(StorageError::NotPrepared)?,
+            scope,
+            actor,
+            role_id,
+            name,
+        )
+        .await
+    }
+    async fn set_role_permissions(
+        &self,
+        scope: &ScopeKey,
+        actor: &str,
+        role_id: &str,
+        permissions: &BTreeSet<String>,
+    ) -> Result<Result<Mutation, DomainFailure>, Self::Error> {
+        set_role_permissions(
+            self.0.as_ref().ok_or(StorageError::NotPrepared)?,
+            scope,
+            actor,
+            role_id,
+            permissions,
+        )
+        .await
+    }
+    async fn delete_role(
+        &self,
+        scope: &ScopeKey,
+        actor: &str,
+        role_id: &str,
+    ) -> Result<Result<Mutation, DomainFailure>, Self::Error> {
+        delete_role(
+            self.0.as_ref().ok_or(StorageError::NotPrepared)?,
+            scope,
+            actor,
+            role_id,
+        )
+        .await
+    }
+    async fn assign_role(
+        &self,
+        scope: &ScopeKey,
+        actor: &str,
+        subject: &str,
+        role_id: &str,
+    ) -> Result<Result<Mutation, DomainFailure>, Self::Error> {
+        assign_role(
+            self.0.as_ref().ok_or(StorageError::NotPrepared)?,
+            scope,
+            actor,
+            subject,
+            role_id,
+        )
+        .await
+    }
+    async fn revoke_role(
+        &self,
+        scope: &ScopeKey,
+        actor: &str,
+        subject: &str,
+        role_id: &str,
+    ) -> Result<Result<Mutation, DomainFailure>, Self::Error> {
+        revoke_role(
+            self.0.as_ref().ok_or(StorageError::NotPrepared)?,
+            scope,
+            actor,
+            subject,
+            role_id,
+        )
+        .await
+    }
 }

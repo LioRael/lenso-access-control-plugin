@@ -10,6 +10,12 @@ on:
         required: true
         default: false
         type: boolean
+      scope:
+        description: Package release scope
+        required: true
+        default: all
+        type: choice
+        options: [all, workers]
       confirm:
         description: Type publish when live is enabled
         required: false
@@ -55,6 +61,7 @@ jobs:
         uses: release-plz/action@2eb1d8bcb770b4c48ccfaad919734b38b51958c9 # v0.5.131
         with:
           command: release
+          config: ${{ inputs.scope == 'workers' && '.github/release-workers.toml' || 'release-plz.toml' }}
           dry_run: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -74,6 +81,7 @@ jobs:
         uses: release-plz/action@2eb1d8bcb770b4c48ccfaad919734b38b51958c9 # v0.5.131
         with:
           command: release
+          config: ${{ inputs.scope == 'workers' && '.github/release-workers.toml' || 'release-plz.toml' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
