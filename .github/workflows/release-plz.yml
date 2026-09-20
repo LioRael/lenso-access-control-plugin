@@ -1,24 +1,29 @@
 name: Release-plz
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
-      live:
-        description: Publish unpublished crate versions and create their releases
+      mode:
+        description: Read-only release qualification mode
         required: true
-        default: false
-        type: boolean
-      scope:
-        description: Package release scope
-        required: true
-        default: all
+        default: dry-run
         type: choice
-        options: [all, workers]
-      confirm:
-        description: Type publish when live is enabled
-        required: false
+        options: [dry-run]
+      source_sha:
+        description: Full SHA already landed on main
+        required: true
+        type: string
+      release_set:
+        description: Exact JSON array of packages to qualify
+        required: true
+        type: string
+      candidate_run_id:
+        description: Candidate CI run ID that proved this SHA
+        required: true
+        type: string
+      candidate_attempt:
+        description: Candidate CI run attempt
+        required: true
         type: string
 
 permissions: {}
@@ -28,79 +33,51 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  reject-unconfirmed-live-release:
-    name: Reject unconfirmed live release
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.live && (inputs.confirm != 'publish' || github.ref != 'refs/heads/main') }}
-    runs-on: ubuntu-24.04
-    steps:
-      - name: Explain the rejected release
-        run: |
-          echo "Live publication requires confirm=publish and ref=main." >&2
-          exit 1
-
   dry-run:
     name: Release dry-run
-    if: ${{ github.event_name == 'workflow_dispatch' && !inputs.live && github.ref == 'refs/heads/main' }}
+    if: ${{ github.ref == 'refs/heads/main' && inputs.mode == 'dry-run' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
-      pull-requests: read
+      actions: read
     steps:
-      - &checkout
-        name: Checkout repository
+      - name: Checkout the immutable landed SHA
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
+          ref: ${{ inputs.source_sha }}
           fetch-depth: 0
           persist-credentials: false
-      - &install-rust
-        name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # stable
+      - name: Verify landed SHA and candidate evidence
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ inputs.source_sha }}
+          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+          CANDIDATE_ATTEMPT: ${{ inputs.candidate_attempt }}
+          RELEASE_SET: ${{ inputs.release_set }}
+        run: |
+          set -euo pipefail
+          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$(git rev-parse HEAD)" == "$SOURCE_SHA" ]]
+          [[ "$(git rev-parse origin/main)" == "$SOURCE_SHA" ]]
+          jq -e 'type == "array" and length > 0 and all(.[]; type == "string")' <<<"$RELEASE_SET" >/dev/null
+          run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CANDIDATE_RUN_ID}")"
+          [[ "$(jq -r .head_sha <<<"$run")" == "$SOURCE_SHA" ]]
+          [[ "$(jq -r .event <<<"$run")" == "push" ]]
+          [[ "$(jq -r .head_branch <<<"$run")" == delta/verify/* ]]
+          [[ "$(jq -r .run_attempt <<<"$run")" == "$CANDIDATE_ATTEMPT" ]]
+          [[ "$(jq -r .conclusion <<<"$run")" == "success" ]]
+          jobs="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CANDIDATE_RUN_ID}/jobs?per_page=100")"
+          jq -e '.jobs[] | select(.name == "quality") | .conclusion == "success"' <<<"$jobs" >/dev/null
+          jq -e '.jobs[] | select(.name == "workers") | .conclusion == "success"' <<<"$jobs" >/dev/null
+          echo "Qualified release set: $RELEASE_SET"
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # stable
         with:
           toolchain: 1.94.0
-      - name: Validate the release without publishing
+      - name: Validate without publishing, tagging, or opening a PR
         uses: release-plz/action@2eb1d8bcb770b4c48ccfaad919734b38b51958c9 # v0.5.131
         with:
           command: release
-          config: ${{ inputs.scope == 'workers' && '.github/release-workers.toml' || 'release-plz.toml' }}
+          config: release-plz.toml
           dry_run: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  release:
-    name: Publish crates
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.live && inputs.confirm == 'publish' && github.ref == 'refs/heads/main' }}
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      pull-requests: read
-      id-token: write
-    steps:
-      - *checkout
-      - *install-rust
-      - name: Publish unpublished crates through Trusted Publishing
-        uses: release-plz/action@2eb1d8bcb770b4c48ccfaad919734b38b51958c9 # v0.5.131
-        with:
-          command: release
-          config: ${{ inputs.scope == 'workers' && '.github/release-workers.toml' || 'release-plz.toml' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  release-plz-pr:
-    name: Release-plz PR
-    if: ${{ github.event_name == 'push' && github.repository_owner == 'LioRael' }}
-    runs-on: ubuntu-24.04
-    permissions:
-      contents: write
-      pull-requests: write
-    concurrency:
-      group: release-plz-${{ github.ref }}
-      cancel-in-progress: false
-    steps:
-      - *checkout
-      - *install-rust
-      - name: Create release PR
-        uses: release-plz/action@2eb1d8bcb770b4c48ccfaad919734b38b51958c9 # v0.5.131
-        with:
-          command: release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

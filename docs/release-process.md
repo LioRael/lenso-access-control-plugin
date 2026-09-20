@@ -12,15 +12,15 @@ Trusted Publisher coordinates for every crate in this repository are:
 - workflow filename: `release-plz.yml`
 - environment: unset
 
-The live workflow is manual and requires both `live=true` and
-`confirm=publish` from the `main` branch. Pushes to `main` may create a release
-PR, but never publish crates directly.
-
-Confirmed manual dispatch publishes every unpublished version on `main`, including
-versions prepared in a compatibility PR. It does not require the current commit
-to have been authored by release-plz. The dry-run uses the same selection policy;
-`release_always` does not bypass the workflow ref, confirmation or OIDC gates.
-
+The checked-in workflow is manual and read-only. Dispatch it from `main` with
+the full landed `source_sha`, an exact JSON `release_set`, `candidate_run_id`,
+and `candidate_attempt`, using `mode=dry-run`. It verifies that the SHA is the
+current landed `main` commit and that the matching candidate `quality` run
+passed before running pinned release-plz with `dry_run: true`. It cannot
+publish, create tags, or create release PRs. This is the remaining release
+boundary: an owner must separately authorize and implement a future publication
+workflow while preserving the package allowlist, action pins, OIDC identities,
+and dependency order below.
 
 Publish shared Capabilities before `lenso-access-control-core`, then publish the
 backend Plugins that depend on it. crates.io requires the first Core and D1 upload to use an existing API token;

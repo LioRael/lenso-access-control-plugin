@@ -16,3 +16,6 @@ This repository owns independent, allow-only RBAC for Lenso vNext.
   projections with `lenso-contract-codegen`; never hand-edit them.
 - Run Cargo through
   `/Users/leosouthey/Projects/framework/.lenso-tools/bin/lenso-cargo`.
+- Contribution, immutable-SHA review, candidate CI, and optional Delta Land
+  delivery are documented in `CONTRIBUTING.md`; the Land skill is only an
+  optional agent entry point.

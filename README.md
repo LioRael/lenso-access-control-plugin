@@ -2,6 +2,10 @@
 
 Independent allow-only RBAC for Lenso applications.
 
+Contribution and immutable-SHA delivery guidance is in
+[`CONTRIBUTING.md`](CONTRIBUTING.md). The optional Delta Land entry point is
+[`.agents/skills/land/SKILL.md`](.agents/skills/land/SKILL.md).
+
 This repository provides:
 
 - `lenso.access-control@1` for default-deny scoped permission checks;
