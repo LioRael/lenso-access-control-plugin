@@ -41,10 +41,10 @@ jobs:
       contents: read
       actions: read
     steps:
-      - name: Checkout the immutable landed SHA
+      - name: Checkout landed main and verify its immutable SHA
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
-          ref: ${{ inputs.source_sha }}
+          ref: main
           fetch-depth: 0
           persist-credentials: false
       - name: Verify landed SHA and candidate evidence
