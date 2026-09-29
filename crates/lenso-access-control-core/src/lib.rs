@@ -97,7 +97,7 @@ impl PolicyConfig {
             || self
                 .bootstrap_callers
                 .iter()
-                .any(|caller| !valid_identifier(caller, 256))
+                .any(|caller| !valid_instance_key(caller))
         {
             return Err(PolicyError::InvalidBootstrapCallers);
         }
@@ -110,7 +110,7 @@ impl PolicyConfig {
             || self
                 .directory_callers
                 .iter()
-                .any(|caller| !valid_identifier(caller, 256))
+                .any(|caller| !valid_instance_key(caller))
         {
             return Err(PolicyError::InvalidDirectoryCallers);
         }
@@ -522,6 +522,12 @@ struct AccessControlActor {
 
 impl TypedActor for AccessControlActor {
     fn from_assertion(assertion: &ActorAssertion) -> Result<Self, ActorProjectionError> {
+        if assertion.actor_kind() != "user" {
+            return Err(ActorProjectionError::UnexpectedActorKind {
+                expected: "user".to_owned(),
+                actual: assertion.actor_kind().to_owned(),
+            });
+        }
         Ok(Self {
             subject: assertion.subject().to_owned(),
         })
@@ -715,6 +721,13 @@ fn valid_display_name(value: &str) -> bool {
     !value.is_empty() && value.len() <= MAX_ROLE_NAME_BYTES && !value.chars().any(char::is_control)
 }
 
+fn valid_instance_key(value: &str) -> bool {
+    let parts = value.split('/').collect::<Vec<_>>();
+    (1..=2).contains(&parts.len())
+        && value.len() <= 256
+        && parts.iter().all(|part| valid_identifier(part, 256))
+}
+
 fn valid_identifier(value: &str, maximum: usize) -> bool {
     valid_opaque_id(value, maximum) && !value.contains('/')
 }
@@ -737,6 +750,41 @@ pub mod conformance;
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn management_mutations_require_a_human_actor() {
+        let now = OffsetDateTime::from_unix_timestamp(1_800_000_000).unwrap();
+        let issuer = lenso_auth_sdk::ActorAssertionIssuer::new("operators", b"operator-key");
+        let machine = issuer.issue(
+            "robot",
+            "service-account",
+            "machine",
+            [lenso_auth_sdk::audience(
+                admin::CAPABILITY_ID,
+                "create_role",
+            )],
+            lenso_auth_sdk::Validity::new(now, now + time::Duration::minutes(1)).unwrap(),
+            std::collections::BTreeMap::new(),
+        );
+        assert!(matches!(
+            AccessControlActor::from_assertion(&machine),
+            Err(ActorProjectionError::UnexpectedActorKind { .. })
+        ));
+    }
+
+    #[test]
+    fn callers_accept_canonical_instance_keys_without_widening_aliases() {
+        assert!(valid_instance_key("lenso.management/default"));
+        assert!(valid_instance_key("bootstrap"));
+        for invalid in [
+            "/bootstrap",
+            "bootstrap/",
+            "plugin/instance/alias",
+            "plugin//instance",
+        ] {
+            assert!(!valid_instance_key(invalid));
+        }
+    }
+
     #[test]
     fn identifiers_are_stable_and_narrow() {
         assert!(valid_scope(&ScopeKey {
