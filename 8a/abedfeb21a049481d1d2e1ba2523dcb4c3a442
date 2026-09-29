@@ -1,0 +1,31 @@
+crates/lenso-access-control-postgres-plugin/src/lib.rs
+  s_f4202e28c6b5b1::t_7b39409276cd6d 437-468
+  s_f4202e28c6b5b1::t_0141d16dda651b 469-470
+crates/lenso-access-control-d1-plugin/Cargo.toml
+  s_f4202e28c6b5b1::t_7b39409276cd6d 42
+crates/lenso-access-control-d1-plugin/src/tests.rs
+  s_f4202e28c6b5b1::t_7b39409276cd6d 11-45
+  s_f4202e28c6b5b1::t_d111ab78a12e4d 46-48
+Cargo.lock
+  s_f4202e28c6b5b1::t_527734c61f1c08 780
+crates/lenso-access-control-d1-plugin/config.schema.json
+  s_f4202e28c6b5b1::t_b03cdc37cbdf6f 16,20-21,31,42,47-48
+crates/lenso-access-control-postgres-plugin/config.schema.json
+  s_f4202e28c6b5b1::t_f54d0bfac645d1 16-17,22,27,31-32,42,53
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "8aabedfeb21a049481d1d2e1ba2523dcb4c3a442",
+  "prompts": {},
+  "sessions": {
+    "s_f4202e28c6b5b1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0ee9e-623b-7d12-a648-d8b462390eec",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
