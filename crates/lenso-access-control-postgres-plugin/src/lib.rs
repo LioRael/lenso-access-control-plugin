@@ -435,6 +435,40 @@ mod tests {
     }
 
     #[test]
+    fn configuration_resolves_with_canonical_callers_and_owner_format_validation() {
+        let descriptor: lenso_app_plan::authoring::PluginDescriptor =
+            serde_json::from_str(PLUGIN_DESCRIPTOR_JSON).unwrap();
+        let configured = config()
+            .with_directory_callers(vec!["lenso.management/default".into()])
+            .unwrap();
+        let overlay = serde_json::to_value(configured).unwrap();
+        let resolved = descriptor
+            .resolve_configuration_json(&[&overlay], "lenso.access-control.postgres/default")
+            .unwrap();
+        let configured: AccessControlConfig = serde_json::from_str(&resolved).unwrap();
+        validate_config(&configured).unwrap();
+        for (field, value) in [
+            ("schema", serde_json::json!("bad-schema")),
+            ("database_url_secret", serde_json::json!("../database")),
+            ("auth_issuer", serde_json::json!("issuer/another")),
+            (
+                "auth_assertion_public_key",
+                serde_json::json!("!".repeat(43)),
+            ),
+            ("bootstrap_callers", serde_json::json!(["bad/caller/extra"])),
+            ("directory_callers", serde_json::json!(["bad caller"])),
+        ] {
+            let mut invalid = overlay.clone();
+            invalid[field] = value;
+            let resolved = descriptor
+                .resolve_configuration_json(&[&invalid], "lenso.access-control.postgres/default")
+                .unwrap();
+            let configured: AccessControlConfig = serde_json::from_str(&resolved).unwrap();
+            assert!(validate_config(&configured).is_err(), "{field}");
+        }
+    }
+
+    #[test]
     fn bootstrap_requires_the_exact_configured_caller_before_storage() {
         let result = futures::executor::block_on(plugin().bootstrap_scope(
             context("another-plugin"),

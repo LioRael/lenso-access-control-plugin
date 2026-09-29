@@ -8,6 +8,44 @@ use lenso_migration_d1::{Error, Statement, Transport};
 use serde_json::Value;
 use std::{cell::RefCell, rc::Rc};
 
+#[test]
+fn configuration_resolves_with_canonical_callers_and_owner_format_validation() {
+    let descriptor: lenso_app_plan::authoring::PluginDescriptor =
+        serde_json::from_str(super::PLUGIN_DESCRIPTOR_JSON).unwrap();
+    let issuer = lenso_auth_sdk::ActorAssertionIssuer::new("operators", b"configuration-test");
+    let overlay = serde_json::json!({
+        "binding": "ACCESS_CONTROL_DB",
+        "auth_issuer": "operators",
+        "auth_assertion_public_key": issuer.public_key_base64(),
+        "bootstrap_callers": ["test.bootstrap/default"],
+        "directory_callers": ["lenso.management/default"]
+    });
+    let resolved = descriptor
+        .resolve_configuration_json(&[&overlay], "lenso.access-control.d1/default")
+        .unwrap();
+    super::validate_config(&serde_json::from_str(&resolved).unwrap()).unwrap();
+    for (field, value) in [
+        ("binding", serde_json::json!("bad-binding")),
+        ("auth_issuer", serde_json::json!("issuer/another")),
+        (
+            "auth_assertion_public_key",
+            serde_json::json!("!".repeat(43)),
+        ),
+        ("bootstrap_callers", serde_json::json!(["bad/caller/extra"])),
+        ("directory_callers", serde_json::json!(["bad caller"])),
+    ] {
+        let mut invalid = overlay.clone();
+        invalid[field] = value;
+        let resolved = descriptor
+            .resolve_configuration_json(&[&invalid], "lenso.access-control.d1/default")
+            .unwrap();
+        assert!(
+            super::validate_config(&serde_json::from_str(&resolved).unwrap()).is_err(),
+            "{field}"
+        );
+    }
+}
+
 #[derive(Clone, Debug)]
 struct Sqlite(Rc<RefCell<rusqlite::Connection>>);
 impl Sqlite {

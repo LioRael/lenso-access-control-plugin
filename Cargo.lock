@@ -777,6 +777,7 @@ dependencies = [
  "js-sys",
  "lenso",
  "lenso-access-control-core",
+ "lenso-app-plan",
  "lenso-auth-sdk",
  "lenso-capability-access-control",
  "lenso-capability-access-control-admin",

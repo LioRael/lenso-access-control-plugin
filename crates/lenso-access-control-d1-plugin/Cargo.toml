@@ -39,6 +39,7 @@ wasm-bindgen = "=0.2.127"
 wasm-bindgen-futures = "=0.4.77"
 
 [dev-dependencies]
+lenso-app-plan.workspace = true
 rusqlite = { version = "0.38", features = ["bundled"] }
 
 [dev-dependencies.lenso-access-control-core]

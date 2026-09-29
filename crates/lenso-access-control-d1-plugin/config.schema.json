@@ -13,12 +13,12 @@
     "auth_issuer": {
       "type": "string",
       "minLength": 1,
-      "maxLength": 256,
-      "pattern": "^[A-Za-z0-9._:-]+$"
+      "maxLength": 256
     },
     "auth_assertion_public_key": {
       "type": "string",
-      "pattern": "^[A-Za-z0-9_-]{43}$"
+      "minLength": 43,
+      "maxLength": 43
     },
     "bootstrap_callers": {
       "type": "array",
@@ -28,8 +28,7 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "maxLength": 256,
-        "pattern": "^[A-Za-z0-9._:-]+$"
+        "maxLength": 256
       }
     },
     "directory_callers": {
@@ -40,13 +39,13 @@
       "items": {
         "type": "string",
         "minLength": 1,
-        "maxLength": 256,
-        "pattern": "^[A-Za-z0-9._:-]+$"
+        "maxLength": 256
       }
     },
     "binding": {
       "type": "string",
-      "pattern": "^[A-Za-z][A-Za-z0-9_]{0,127}$"
+      "minLength": 1,
+      "maxLength": 128
     }
   }
 }
