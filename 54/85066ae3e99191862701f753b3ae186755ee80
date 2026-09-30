@@ -1,0 +1,37 @@
+.github/workflows/ci.yml
+  s_f4202e28c6b5b1::t_9d2ef02816f49d 42,48,68
+Cargo.lock
+  s_f4202e28c6b5b1::t_b64d9bbe7c3cab 730-731,757,773,799,847,958-959,968-969,992,1012-1013,1045-1046,1060-1061,1074,1089-1090,2386-2387
+Cargo.toml
+  s_f4202e28c6b5b1::t_ac9ce4134c6413 23,29-30,54-64
+crates/lenso-access-control-core/Cargo.toml
+  s_f4202e28c6b5b1::t_49a07de3b8bb1b 3
+crates/lenso-access-control-d1-plugin/Cargo.toml
+  s_f4202e28c6b5b1::t_576463d46191ca 3,21
+crates/lenso-access-control-postgres-plugin/Cargo.toml
+  s_f4202e28c6b5b1::t_5f7911bb8a1239 3,20
+crates/lenso-capability-access-control-admin/Cargo.toml
+  s_f4202e28c6b5b1::t_84a5f3641d18a0 19
+crates/lenso-capability-access-control-directory/Cargo.toml
+  s_f4202e28c6b5b1::t_4c5427c364f8a9 19
+crates/lenso-capability-access-control/Cargo.toml
+  s_f4202e28c6b5b1::t_5c38a8ad418316 19
+docs/release-process.md
+  s_f4202e28c6b5b1::t_51565fdc9752fc 40-58
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "5485066ae3e99191862701f753b3ae186755ee80",
+  "prompts": {},
+  "sessions": {
+    "s_f4202e28c6b5b1": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0ee9e-623b-7d12-a648-d8b462390eec",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
