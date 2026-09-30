@@ -1,6 +1,6 @@
 [package]
 name = "lenso-access-control-d1-plugin"
-version = "0.1.0"
+version = "0.1.1"
 description = "D1-backed independent RBAC Plugin for Lenso Workers applications."
 edition.workspace = true
 license.workspace = true
@@ -18,7 +18,7 @@ workers="host_facilities::state"
 workers-adapter="src/host_facilities/state.mjs"
 
 [dependencies]
-lenso-access-control-core = { version = "0.1.0", path = "../lenso-access-control-core" }
+lenso-access-control-core = { version = "0.1.1", path = "../lenso-access-control-core" }
 lenso-native-adapter.workspace = true
 lenso-migration = "0.1.0"
 lenso-migration-d1 = "0.1.0"

@@ -39,13 +39,13 @@ jobs:
       - run: cargo fmt --all -- --check
       - name: Check generated contracts
         run: |
-          cargo install --locked --version '=0.10.0' lenso-contract-codegen
+          cargo install --locked --git https://github.com/LioRael/lenso --rev f670422953b42cc33b83a9b8cde9a4c74e9f6ceb lenso-contract-codegen
           lenso-contract-codegen workspace check --manifest-path Cargo.toml
       - run: cargo check --locked --workspace --all-targets
       - run: cargo test --locked --workspace --features postgres-acceptance
       - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
       - name: Verify the coordinated package release
-        run: cargo package --locked -p lenso-capability-access-control -p lenso-capability-access-control-admin -p lenso-capability-access-control-directory -p lenso-access-control-core -p lenso-access-control-postgres-plugin -p lenso-access-control-d1-plugin
+        run: cargo package --locked -p lenso-access-control-core -p lenso-access-control-postgres-plugin -p lenso-access-control-d1-plugin
 
   workers:
     runs-on: ubuntu-24.04
@@ -65,7 +65,7 @@ jobs:
           version: 11.5.0
       - run: pnpm --dir workers install --frozen-lockfile
       - run: cargo clippy --locked -p lenso-access-control-d1-plugin -p lenso-access-control-workers-smoke --target wasm32-unknown-unknown -- -D warnings
-      - run: cargo package --locked --target wasm32-unknown-unknown -p lenso-capability-access-control -p lenso-capability-access-control-admin -p lenso-capability-access-control-directory -p lenso-access-control-core -p lenso-access-control-d1-plugin
+      - run: cargo package --locked --target wasm32-unknown-unknown -p lenso-access-control-core -p lenso-access-control-d1-plugin
       - run: cargo install --locked --version '=0.2.127' wasm-bindgen-cli
       - run: bash workers/build.sh
       - name: Verify source-selected D1 facility

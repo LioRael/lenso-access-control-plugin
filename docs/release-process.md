@@ -37,3 +37,22 @@ and PostgreSQL 0.2.1. It does not publish the unrelated, previously unpublished
 Agent Tools package. The default `scope=all` retains the repository-wide release
 behavior. Verify registry visibility and run the Workers consumer against the
 released dependency graph before marking this cohort delivered.
+
+## SDK35 source upgrade
+
+The SDK35 source cohort selects Kernel 0.3.12, facade 0.5.28, Native Adapter
+0.3.19 and Codegen 0.10.1. The three registered Capability 0.2.0 archives
+retain their original package versions and compatible primary Kernel 0.3.5
+minimum. Their contract source, schemas and generated Rust are byte-identical
+to the immutable registry archives. Consumer locks select the current Kernel;
+this does not require republishing unchanged Capability packages.
+
+The required package checks select the changed public Core 0.1.1, PostgreSQL
+0.2.2 and D1 0.1.1 cohort. Cargo's normalized verification consumes the
+registered Capability archives instead of repacking their same published
+versions into a local registry. Both Native and Wasm package verification
+remain required. The new facility implementation also requires the coordinated
+SDK35 producer packages to be available in the registry. A passing source
+check with Git patches is not a passing registry archive check. Registry
+publication requires separate authorization and is not performed by this
+source upgrade.
