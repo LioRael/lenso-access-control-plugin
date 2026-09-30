@@ -68,4 +68,6 @@ jobs:
       - run: cargo package --locked --target wasm32-unknown-unknown -p lenso-capability-access-control -p lenso-capability-access-control-admin -p lenso-capability-access-control-directory -p lenso-access-control-core -p lenso-access-control-d1-plugin
       - run: cargo install --locked --version '=0.2.127' wasm-bindgen-cli
       - run: bash workers/build.sh
+      - name: Verify source-selected D1 facility
+        run: node --test crates/lenso-access-control-d1-plugin/tests/source-facility.test.mjs
       - run: node workers/proof.mjs

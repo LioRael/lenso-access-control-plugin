@@ -1,4 +1,5 @@
 //! D1 Access Control Plugin. The Host supplies an event-owned primary binding.
+pub mod host_facilities;
 pub mod schema;
 pub mod storage;
 #[cfg(test)]
@@ -96,6 +97,8 @@ struct D1AccessControlPlugin {
     #[config]
     config: D1Config,
     binding: EventBinding,
+    #[facility(id = "state")]
+    d1: Option<host_facilities::EventStorageBinding>,
     prepared: Rc<RefCell<bool>>,
 }
 #[lenso::provides(
@@ -105,9 +108,14 @@ struct D1AccessControlPlugin {
 )]
 impl D1AccessControlPlugin {}
 impl D1AccessControlPlugin {
+    fn selected_binding(&self) -> EventBinding {
+        self.d1
+            .as_ref()
+            .map_or_else(|| self.binding.clone(), |value| value.binding.clone())
+    }
     fn service(&self) -> AccessControl<storage::D1Store<EventBinding>> {
         let binding = if *self.prepared.borrow() {
-            self.binding.clone()
+            self.selected_binding()
         } else {
             EventBinding::default()
         };
@@ -186,17 +194,29 @@ impl D1AccessControlPlugin {
 }
 impl Lifecycle for D1AccessControlPlugin {
     async fn activate(&self, _context: ActivateContext) -> Result<(), RuntimeFailure> {
+        if self
+            .d1
+            .as_ref()
+            .is_some_and(|value| value.name != self.config.binding)
+        {
+            return Err(RuntimeFailure::InvalidResolvedPlan {
+                detail: "Access Control requires its exact configured D1 binding".into(),
+            });
+        }
         schema::plan()
             .map_err(|error| migration_failure(&error))?
-            .verify(&self.binding)
+            .verify(&self.selected_binding())
             .await
             .map_err(|error| migration_failure(&error))?;
         *self.prepared.borrow_mut() = true;
         Ok(())
     }
-    async fn deactivate(&self, _context: DeactivateContext) -> Result<(), RuntimeFailure> {
+    fn deactivate(
+        &self,
+        _context: DeactivateContext,
+    ) -> impl std::future::Future<Output = Result<(), RuntimeFailure>> {
         *self.prepared.borrow_mut() = false;
-        Ok(())
+        std::future::ready(Ok(()))
     }
 }
 fn migration_failure(error: &Error) -> RuntimeFailure {

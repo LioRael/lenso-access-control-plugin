@@ -12,6 +12,11 @@ rust-version.workspace = true
 plugin-id = "lenso.access-control.d1"
 root-slot = "access-control"
 
+[package.metadata.lenso.host-facilities.state]
+native="host_facilities::state"
+workers="host_facilities::state"
+workers-adapter="src/host_facilities/state.mjs"
+
 [dependencies]
 lenso-access-control-core = { version = "0.1.0", path = "../lenso-access-control-core" }
 lenso-native-adapter.workspace = true
