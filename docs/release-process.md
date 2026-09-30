@@ -1,42 +1,59 @@
 # Release process
 
-The Capability, core, PostgreSQL, D1, and Agent Tools crates are public.
-`lenso-access-control-workers-smoke` is private and must not be published. Initial publication is performed
-in dependency order; later releases use `.github/workflows/release-plz.yml`
-through crates.io Trusted Publishing.
+The three Access Control Capability 0.2.0 packages are already registered and
+remain immutable. The changed release cohort is limited to:
 
-Trusted Publisher coordinates for every crate in this repository are:
+- `lenso-access-control-core` 0.1.1
+- `lenso-access-control-postgres-plugin` 0.2.2
+- `lenso-access-control-d1-plugin` 0.1.1
+
+Agent Tools and Workers smoke packages have `publish = false` and are outside
+this release set. Do not change their publication policy as part of an
+implementation release.
+
+## Manual qualification and publication
+
+`.github/workflows/release-plz.yml` has only `workflow_dispatch`. A Main push
+cannot publish packages or create a release PR. The default `dry-run` job has
+read permissions; it cannot obtain an OIDC publishing token.
+
+Dispatch from Main with the full `source_sha`, exact `candidate_run_id` and
+`candidate_attempt`, and a JSON `release_set` of `package_name`/`version`
+objects. The set must equal the current registry-derived pending subset of
+the three versions above. Extra packages, wrong versions, duplicate names and
+unknown registry responses fail closed.
+
+The gate verifies the checkout against a fresh remote Main readback. It
+requires the matching `candidate/**` push CI workflow, SHA and attempt, with
+one successful `quality` job and one successful `workers` job. An older
+attempt, a different branch or missing job cannot qualify the source.
+
+Normalized Cargo package verification runs only for the pending changed
+packages. It consumes the registered Capability archives without repacking
+their published versions. Archive inspection checks name, version, clean VCS
+SHA and both Cargo manifests, and records archive SHA256 digests.
+
+Live mode requires separate human authorization and `confirmation=publish`.
+The live job repeats the source, candidate, pending-set and archive checks
+immediately before pinned release-plz, using only `.github/release-workers.toml`.
+It reconciles the action's exact package records, Primary version visibility,
+source-bound Git tags and GitHub releases, including after partial failure.
+A failed or unknown publication is inspected before any further dispatch.
+Landing this workflow does not authorize a live dispatch.
+
+Trusted Publisher coordinates for these registered package names are:
 
 - repository owner: `LioRael`
 - repository name: `lenso-access-control-plugin`
 - workflow filename: `release-plz.yml`
 - environment: unset
 
-The checked-in workflow is manual and read-only. Dispatch it from `main` with
-the full landed `source_sha`, an exact JSON `release_set`, `candidate_run_id`,
-and `candidate_attempt`, using `mode=dry-run`. It verifies that the SHA is the
-current landed `main` commit and that the matching candidate `quality` run
-passed before running pinned release-plz with `dry_run: true`. It cannot
-publish, create tags, or create release PRs. This is the remaining release
-boundary: an owner must separately authorize and implement a future publication
-workflow while preserving the package allowlist, action pins, OIDC identities,
-and dependency order below.
-
-Publish shared Capabilities before `lenso-access-control-core`, then publish the
-backend Plugins that depend on it. crates.io requires the first Core and D1 upload to use an existing API token;
-Trusted Publishing can only be configured after the crate exists. Bootstrap
-those exact versions from the merged commit using the normal Cargo credential
-provider, then configure this repository/workflow as their Trusted Publisher.
-Subsequent publications use the confirmed OIDC workflow. Local qualification
-does not claim these new packages are already available in the registry.
-
-
-For the Workers cohort, dispatch with `scope=workers` for both dry-run and live.
-The checked-in `.github/release-workers.toml` selects only Core 0.1.0, D1 0.1.0,
-and PostgreSQL 0.2.1. It does not publish the unrelated, previously unpublished
-Agent Tools package. The default `scope=all` retains the repository-wide release
-behavior. Verify registry visibility and run the Workers consumer against the
-released dependency graph before marking this cohort delivered.
+Confirm these coordinates in each crate's settings before authorized live
+publication. Current [crates.io documentation](https://crates.io/docs/trusted-publishing)
+requires a name's first publication before its Trusted Publisher can be
+configured. All three names in this cohort already exist; no first-name
+bootstrap is included here. Publication order is Core, then PostgreSQL and D1.
+The workflow does not change publisher settings or allocate crate names.
 
 ## SDK35 source upgrade
 

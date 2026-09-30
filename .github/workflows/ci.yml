@@ -35,6 +35,8 @@ jobs:
           components: rustfmt,clippy
       - uses: Swatinem/rust-cache@v2
       - run: ./scripts/check-repository-boundary.sh
+      - name: Verify manual release guards
+        run: bash .github/scripts/test-release-scripts.sh
       - run: python3 scripts/generate-d1-migrations.py --check
       - run: cargo fmt --all -- --check
       - name: Check generated contracts

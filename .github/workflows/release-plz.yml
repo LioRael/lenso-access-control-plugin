@@ -4,17 +4,21 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: Read-only release qualification mode
+        description: Read-only by default; publish needs separate authorization
         required: true
         default: dry-run
         type: choice
-        options: [dry-run]
+        options: [dry-run, publish]
+      confirmation:
+        description: Type publish only for separately authorized publication
+        required: false
+        type: string
       source_sha:
         description: Full SHA already landed on main
         required: true
         type: string
       release_set:
-        description: Exact JSON array of packages to qualify
+        description: Exact JSON array of pending package_name/version objects
         required: true
         type: string
       candidate_run_id:
@@ -22,7 +26,7 @@ on:
         required: true
         type: string
       candidate_attempt:
-        description: Candidate CI run attempt
+        description: Exact successful candidate CI attempt
         required: true
         type: string
 
@@ -33,51 +37,91 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  dry-run:
-    name: Release dry-run
-    if: ${{ github.ref == 'refs/heads/main' && inputs.mode == 'dry-run' }}
+  qualification:
+    name: Release qualification
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-24.04
     permissions:
       contents: read
       actions: read
+      pull-requests: read
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      RELEASE_SHA: ${{ inputs.source_sha }}
+      RELEASE_SET: ${{ inputs.release_set }}
+      RELEASE_MODE: ${{ inputs.mode }}
+      RELEASE_CONFIRMATION: ${{ inputs.confirmation }}
+      CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+      CANDIDATE_ATTEMPT: ${{ inputs.candidate_attempt }}
     steps:
-      - name: Checkout landed main and verify its immutable SHA
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: main
           fetch-depth: 0
           persist-credentials: false
-      - name: Verify landed SHA and candidate evidence
-        env:
-          GH_TOKEN: ${{ github.token }}
-          SOURCE_SHA: ${{ inputs.source_sha }}
-          CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
-          CANDIDATE_ATTEMPT: ${{ inputs.candidate_attempt }}
-          RELEASE_SET: ${{ inputs.release_set }}
-        run: |
-          set -euo pipefail
-          [[ "$SOURCE_SHA" =~ ^[0-9a-f]{40}$ ]]
-          [[ "$(git rev-parse HEAD)" == "$SOURCE_SHA" ]]
-          [[ "$(git rev-parse origin/main)" == "$SOURCE_SHA" ]]
-          jq -e 'type == "array" and length > 0 and all(.[]; type == "string")' <<<"$RELEASE_SET" >/dev/null
-          run="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CANDIDATE_RUN_ID}")"
-          [[ "$(jq -r .head_sha <<<"$run")" == "$SOURCE_SHA" ]]
-          [[ "$(jq -r .event <<<"$run")" == "push" ]]
-          [[ "$(jq -r .head_branch <<<"$run")" == delta/verify/* ]]
-          [[ "$(jq -r .run_attempt <<<"$run")" == "$CANDIDATE_ATTEMPT" ]]
-          [[ "$(jq -r .conclusion <<<"$run")" == "success" ]]
-          jobs="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${CANDIDATE_RUN_ID}/jobs?per_page=100")"
-          jq -e '.jobs[] | select(.name == "quality") | .conclusion == "success"' <<<"$jobs" >/dev/null
-          jq -e '.jobs[] | select(.name == "workers") | .conclusion == "success"' <<<"$jobs" >/dev/null
-          echo "Qualified release set: $RELEASE_SET"
       - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # stable
         with:
           toolchain: 1.94.0
-      - name: Validate without publishing, tagging, or opening a PR
+      - name: Verify source, exact package set and CI attempt
+        run: bash .github/scripts/release-gate.sh
+      - name: Verify normalized archives from the clean source
+        run: bash .github/scripts/release-preflight.sh
+      - name: Plan without publishing, tagging or opening a PR
+        id: plan
         uses: release-plz/action@2eb1d8bcb770b4c48ccfaad919734b38b51958c9 # v0.5.131
         with:
           command: release
-          config: release-plz.toml
+          config: .github/release-workers.toml
+          version: 0.3.160
           dry_run: true
+      - name: Validate dry-run records
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EXPECTED_RELEASE_SET: ${{ inputs.release_set }}
+          ACTUAL_RELEASES: ${{ steps.plan.outputs.releases }}
+        run: bash .github/scripts/release-plan.sh
+
+  publish:
+    name: Publish separately authorized set
+    needs: qualification
+    if: ${{ github.ref == 'refs/heads/main' && inputs.mode == 'publish' && needs.qualification.result == 'success' }}
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+      pull-requests: read
+      id-token: write
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+      RELEASE_SHA: ${{ inputs.source_sha }}
+      RELEASE_SET: ${{ inputs.release_set }}
+      RELEASE_MODE: ${{ inputs.mode }}
+      RELEASE_CONFIRMATION: ${{ inputs.confirmation }}
+      CANDIDATE_RUN_ID: ${{ inputs.candidate_run_id }}
+      CANDIDATE_ATTEMPT: ${{ inputs.candidate_attempt }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88 # stable
+        with:
+          toolchain: 1.94.0
+      - name: Reverify current Main, approval and exact candidate attempt
+        run: bash .github/scripts/release-gate.sh
+      - name: Reverify normalized archives immediately before publication
+        run: bash .github/scripts/release-preflight.sh
+      - name: Publish the bounded owner cohort
+        id: release
+        uses: release-plz/action@2eb1d8bcb770b4c48ccfaad919734b38b51958c9 # v0.5.131
+        with:
+          command: release
+          config: .github/release-workers.toml
+          version: 0.3.160
+      - name: Reconcile reported packages, Primary versions and exact source tags
+        if: ${{ !cancelled() && steps.release.outcome != 'skipped' }}
+        env:
+          EXPECTED_RELEASE_SET: ${{ inputs.release_set }}
+          ACTUAL_RELEASES: ${{ steps.release.outputs.releases }}
+          RELEASE_ACTION_OUTCOME: ${{ steps.release.outcome }}
+        run: bash .github/scripts/release-postcondition.sh

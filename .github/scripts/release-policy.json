@@ -1,0 +1,9 @@
+{
+  "repository": "LioRael/lenso-access-control-plugin",
+  "required_jobs": ["quality", "workers"],
+  "packages": [
+    {"package_name": "lenso-access-control-core", "version": "0.1.1"},
+    {"package_name": "lenso-access-control-postgres-plugin", "version": "0.2.2"},
+    {"package_name": "lenso-access-control-d1-plugin", "version": "0.1.1"}
+  ]
+}
