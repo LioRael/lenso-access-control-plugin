@@ -35,8 +35,8 @@ Deactivation closes the pool. Setup and upgrade remain explicit operator work.
 ## Honest limits
 
 Access Control does not verify scope existence or membership. Organization
-migration is separate. Audit delivery is not present because there is not yet
-an Audit Capability. Role inheritance, explicit deny, direct grants,
+migration is separate. Audit delivery is not integrated. Role inheritance,
+explicit deny, direct grants,
 conditional policy, relationship traversal, and a Console UI surface are
 outside v1. Agent Tools are supplied by a separate private adapter and never
 bootstrap a scope.
