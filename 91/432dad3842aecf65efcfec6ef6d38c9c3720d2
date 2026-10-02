@@ -1,0 +1,21 @@
+crates/lenso-capability-access-control-directory/Cargo.toml
+  s_973ebcd4426bd6::t_49beab12d22949 9
+docs/plugin-card.md
+  s_973ebcd4426bd6::t_7639bd1c58d224 39
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "91432dad3842aecf65efcfec6ef6d38c9c3720d2",
+  "prompts": {},
+  "sessions": {
+    "s_973ebcd4426bd6": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "01a0fa09-26d3-7e61-985f-e1545172753d",
+        "model": "gpt-6.1-sol"
+      },
+      "human_author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
