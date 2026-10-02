@@ -1,0 +1,16 @@
+Cargo.lock
+  h_9d56aba080c170 730-732,848-849,961-962,972-973,996-997,1018-1019,1051-1053,1067-1069,1082-1083,1099-1100
+Cargo.toml
+  h_9d56aba080c170 23,30
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.5",
+  "base_commit_sha": "dbd4908a4c3527d633660fba896fea2b6d975ed9",
+  "prompts": {},
+  "humans": {
+    "h_9d56aba080c170": {
+      "author": "LioRael <leo@lenso.dev>"
+    }
+  }
+}
